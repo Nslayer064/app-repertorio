@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Repertório de Culto — Ferramenta de Execução</title>
+<title>Repertório de Culto — Versão 2.0</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
   :root {
@@ -15,7 +15,6 @@
     --texto-principal: #111827;
     --texto-suave: #4b5563;
     --borda: #e5e7eb;
-    --borda-foco: #93c5fd;
     --cifra-cor: #b45309;
     --obs-cor: #15803d;
     --destaque-bg: #fffbeb;
@@ -42,16 +41,21 @@
     border-bottom: 1px solid var(--borda); box-shadow: 0 4px 6px -4px rgba(0,0,0,0.02);
   }
   .topo-conteudo {
-    max-width: 840px; margin: 0 auto; padding: 14px 20px;
+    max-width: 900px; margin: 0 auto; padding: 14px 20px;
     display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
   }
-  .topo-titulos { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 220px; }
+  .topo-titulos { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 240px; }
   .topo-titulos input.titulo-repertorio {
-    font-size: 1.15rem; font-weight: 700; border: none; outline: none; background: transparent; color: var(--texto-principal); width: 100%;
+    font-size: 1.2rem; font-weight: 700; border: none; outline: none; background: transparent; color: var(--texto-principal); width: 100%;
   }
-  .topo-titulos input.subtitulo-repertorio {
-    font-size: 0.8rem; color: var(--texto-suave); border: none; outline: none; background: transparent; width: 100%;
+  .topo-meta-linha { display: flex; align-items: center; gap: 10px; }
+  .topo-meta-linha input[type="date"] {
+    font-size: 0.8rem; color: var(--texto-suave); border: 1px solid var(--borda); border-radius: 4px; padding: 1px 6px; background: #fafafa; outline: none;
   }
+  .topo-meta-linha input[type="text"] {
+    font-size: 0.8rem; color: var(--texto-suave); border: none; outline: none; background: transparent; width: 140px;
+  }
+
   .topo-acoes { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
   
   .btn {
@@ -68,13 +72,26 @@
   .btn-bloqueio { background: #f3f4f6; color: var(--texto-suave); }
   body.modo-visualizacao .btn-bloqueio { background: #fef2f2; color: #b91c1c; border-color: #fca5a5; }
 
-  /* ===== Índice Sticky ===== */
+  /* ===== Abas Principais (Navegação) ===== */
+  .barra-abas {
+    background: #e5e7eb; border-bottom: 1px solid #d1d5db; padding: 0 20px;
+  }
+  .abas-conteudo {
+    max-width: 900px; margin: 0 auto; display: flex; gap: 4px;
+  }
+  .aba-btn {
+    padding: 10px 18px; font-size: 0.82rem; font-weight: 600; background: transparent;
+    border: none; cursor: pointer; color: var(--texto-suave); border-bottom: 3px solid transparent;
+  }
+  .aba-btn.ativa { color: var(--primaria); background: var(--surface); border-bottom-color: var(--primaria); }
+
+  /* ===== Índice Sticky de Músicas ===== */
   nav.indice {
     position: sticky; top: 61px; z-index: 20; background: rgba(255, 255, 255, 0.92);
     backdrop-filter: blur(6px); border-bottom: 1px solid var(--borda);
   }
   .indice-lista {
-    max-width: 840px; margin: 0 auto; padding: 6px 20px;
+    max-width: 900px; margin: 0 auto; padding: 6px 20px;
     display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none;
   }
   .indice-lista::-webkit-scrollbar { display: none; }
@@ -89,9 +106,10 @@
   .indice-link { font-size: 0.78rem; font-weight: 500; cursor: pointer; white-space: nowrap; color: var(--texto-principal); }
   .indice-seta { border: none; background: transparent; color: var(--texto-suave); cursor: pointer; font-size: 0.7rem; padding: 2px 4px; border-radius: 4px; }
   .indice-item.ativo .indice-seta { color: #cbd5e1; }
-  .indice-seta:hover { background: rgba(0,0,0,0.08); }
 
-  .container { max-width: 840px; margin: 0 auto; padding: 20px 16px 0; }
+  .container { max-width: 900px; margin: 0 auto; padding: 20px 16px 0; }
+  .painel-view { display: none; }
+  .painel-view.ativo { display: block; }
 
   /* ===== Bloco de Música ===== */
   .musica-bloco { scroll-margin-top: 120px; margin-bottom: 32px; }
@@ -109,15 +127,12 @@
   .musica-meta { font-size: 0.8rem; color: var(--texto-suave); display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
   .musica-meta-linha { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
   .musica-meta input { border: none; border-bottom: 1px dotted transparent; outline: none; font-size: inherit; color: inherit; background: transparent; }
-  .musica-meta input:focus { border-bottom-color: var(--primaria); }
 
   .campo-instrumento {
     background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 4px 8px;
     font-size: 0.78rem; color: #166534; display: flex; align-items: center; gap: 6px; width: 100%; margin-top: 4px;
   }
-  .campo-instrumento input {
-    border: none; outline: none; background: transparent; font-size: inherit; color: inherit; width: 100%; font-weight: 500;
-  }
+  .campo-instrumento input { border: none; outline: none; background: transparent; font-size: inherit; color: inherit; width: 100%; font-weight: 500; }
 
   .badges-musica { display: flex; gap: 6px; flex-wrap: wrap; flex-shrink: 0; }
   .tom-badge {
@@ -132,15 +147,12 @@
   .btn-icone-limpo { border: none; background: transparent; color: var(--texto-suave); cursor: pointer; padding: 5px; border-radius: 4px; font-size: 0.85rem; }
   .btn-icone-limpo:hover { background: #f3f4f6; color: #b91c1c; }
 
-  /* ===== Mapa da música (roteiro resumido) ===== */
   .mapa-musica { display: flex; gap: 5px; flex-wrap: wrap; margin: -4px 0 14px; }
   .chip-mapa {
     background: #eef2f7; border: 1px solid var(--borda); color: var(--primaria);
     font-size: 0.72rem; font-weight: 700; padding: 3px 9px; border-radius: 12px; cursor: pointer;
   }
   .chip-mapa:hover { background: var(--primaria); color: white; border-color: var(--primaria); }
-
-  /* ===== Contexto de identificação por página impressa ===== */
   .contexto-impressao { display: none; }
 
   /* ===== Partes ===== */
@@ -168,7 +180,6 @@
     width: 45px; border: 1px solid var(--borda); border-radius: 4px; padding: 2px 4px;
     font-size: 0.75rem; text-align: center; outline: none; background: #fafafa;
   }
-  .meta-campo input:focus { border-color: var(--primaria); background: white; }
   .meta-campo-obs { flex: 1; min-width: 140px; }
   .meta-campo-obs input { width: 100%; text-align: left; }
   .campo-codigo-parte { width: 36px !important; text-transform: uppercase; font-weight: 700; color: var(--primaria); }
@@ -180,76 +191,43 @@
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     font-weight: 600; color: var(--cifra-cor); font-size: 0.9rem; line-height: 1.6;
     white-space: pre; overflow-x: auto; outline: none; min-height: 1.4em; padding: 1px 4px; border-radius: 4px;
-    scrollbar-width: thin;
   }
-  .linha-cifra:focus { background: var(--destaque-bg); }
-  .linha-letra {
-    font-size: 0.9rem; line-height: 1.5; outline: none; min-height: 1.4em;
-    color: var(--texto-principal); padding: 1px 4px; border-radius: 4px;
-  }
-  .linha-letra:focus { background: #f8fafc; }
-  .linha-obs {
-    font-size: 0.74rem; font-style: italic; line-height: 1.4; outline: none; min-height: 1.2em;
-    color: var(--obs-cor); padding: 1px 4px; border-radius: 4px; opacity: 0.9;
-  }
+  .linha-letra { font-size: 0.9rem; line-height: 1.5; outline: none; min-height: 1.4em; color: var(--texto-principal); padding: 1px 4px; border-radius: 4px; }
+  .linha-obs { font-size: 0.74rem; font-style: italic; line-height: 1.4; outline: none; min-height: 1.2em; color: var(--obs-cor); padding: 1px 4px; border-radius: 4px; }
   .linha-obs:before { content: "🎸 " attr(data-placeholder); }
   .linha-obs:not(:empty):before { content: "🎸 "; }
-  .linha-obs:focus { background: #f0fdf4; opacity: 1; }
   
-  [contenteditable]:empty:before {
-    content: attr(data-placeholder); color: #9ca3af; font-weight: 400; pointer-events: none; display: block;
-  }
+  [contenteditable]:empty:before { content: attr(data-placeholder); color: #9ca3af; font-weight: 400; pointer-events: none; display: block; }
   .linha-obs:empty:before { color: #a7d8b4; font-style: italic; }
 
   .btn-excluir-linha {
-    position: absolute; right: 0; top: 2px;
-    background: none; border: none; color: #9ca3af; cursor: pointer; font-size: 0.7rem;
-    opacity: 0; transition: opacity 0.15s; padding: 4px;
+    position: absolute; right: 0; top: 2px; background: none; border: none; color: #9ca3af; cursor: pointer; font-size: 0.7rem; opacity: 0; transition: opacity 0.15s; padding: 4px;
   }
   .linha-grupo:hover .btn-excluir-linha { opacity: 1; }
   .btn-excluir-linha:hover { color: #b91c1c !important; }
 
   .botoes-rodape-parte { display: flex; gap: 10px; margin-top: 10px; padding-top: 6px; }
-  .btn-acao-micro {
-    background: none; border: none; font-size: 0.75rem; color: var(--texto-suave); cursor: pointer;
-    display: inline-flex; align-items: center; gap: 3px; font-weight: 500;
-  }
+  .btn-acao-micro { background: none; border: none; font-size: 0.75rem; color: var(--texto-suave); cursor: pointer; display: inline-flex; align-items: center; gap: 3px; font-weight: 500; }
   .btn-acao-micro:hover { color: var(--primaria); }
   .rodape-add { text-align: center; margin: 24px 0 12px; }
 
   /* ===== Modo de Visualização ===== */
-  body.modo-visualizacao .btn-remover-musica,
-  body.modo-visualizacao .musica-subacoes,
-  body.modo-visualizacao .indice-seta,
-  body.modo-visualizacao .topo-acoes button:not(.btn-bloqueio):not(.btn-sucesso),
-  body.modo-visualizacao .btn-excluir-linha,
-  body.modo-visualizacao .botoes-rodape-parte,
-  body.modo-visualizacao .rodape-add,
-  body.modo-visualizacao .btn-icone-limpo,
-  body.modo-visualizacao .campo-instrumento,
-  body.modo-visualizacao .controles-parte {
-    display: none !important;
-  }
-  body.modo-visualizacao input,
-  body.modo-visualizacao [contenteditable] {
-    pointer-events: none; border: none !important; background: transparent !important;
-  }
-  body.modo-visualizacao [contenteditable]:empty:before { display: none !important; }
-  body.modo-visualizacao .linha-cifra:empty,
-  body.modo-visualizacao .linha-obs:empty { display: none !important; }
+  body.modo-visualizacao .btn-remover-musica, body.modo-visualizacao .musica-subacoes, body.modo-visualizacao .indice-seta, body.modo-visualizacao .topo-acoes button:not(.btn-bloqueio):not(.btn-sucesso), body.modo-visualizacao .btn-excluir-linha, body.modo-visualizacao .botoes-rodape-parte, body.modo-visualizacao .rodape-add, body.modo-visualizacao .btn-icone-limpo, body.modo-visualizacao .campo-instrumento, body.modo-visualizacao .controles-parte, body.modo-visualizacao .barra-abas { display: none !important; }
+  body.modo-visualizacao input, body.modo-visualizacao [contenteditable] { pointer-events: none; border: none !important; background: transparent !important; }
+  body.modo-visualizacao [contenteditable]:empty:before, body.modo-visualizacao .linha-cifra:empty, body.modo-visualizacao .linha-obs:empty { display: none !important; }
   body.modo-visualizacao .musica-cabecalho { border-left: 4px solid var(--primaria); }
 
-  /* ===== Modais ===== */
+  /* ===== Modais e Listas ===== */
   .modal-fundo { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.5); z-index: 50; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(2px); }
   .modal-fundo.aberto { display: flex; }
-  .modal-caixa { background: var(--surface); border-radius: var(--raio-card); padding: 24px; max-width: 360px; width: 100%; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); max-height: 85vh; overflow-y: auto; }
+  .modal-caixa { background: var(--surface); border-radius: var(--raio-card); padding: 24px; max-width: 420px; width: 100%; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); max-height: 85vh; overflow-y: auto; }
   .modal-caixa h3 { font-size: 1.05rem; margin-bottom: 6px; font-weight: 600; }
   .modal-caixa p { font-size: 0.85rem; color: var(--texto-suave); margin-bottom: 16px; }
   .modal-opcao { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--borda); border-radius: 6px; margin-bottom: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 500; }
   .modal-opcao:hover { border-color: var(--primaria); background: #f8fafc; }
   .modal-botoes { display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end; }
-  
-  .modal-caixa.larga { max-width: 620px; }
+  .modal-caixa.larga { max-width: 680px; }
+
   .abas-importar { display: flex; gap: 6px; margin-bottom: 16px; }
   .aba-importar { flex: 1; text-align: center; padding: 8px; border-radius: 6px; border: 1px solid var(--borda); background: var(--surface); cursor: pointer; font-size: 0.82rem; font-weight: 500; }
   .aba-importar.ativa { background: var(--primaria); color: white; border-color: var(--primaria); }
@@ -257,26 +235,23 @@
   .painel-importar.ativo { display: block; }
   .area-colar { width: 100%; min-height: 150px; border: 1px solid var(--borda); border-radius: 6px; padding: 10px; font-family: monospace; font-size: 0.8rem; resize: vertical; outline: none; }
   .input-busca { width: 100%; border: 1px solid var(--borda); border-radius: 6px; padding: 8px 10px; font-size: 0.85rem; outline: none; margin-bottom: 12px; }
-  .input-busca:focus { border-color: var(--primaria); }
   .input-pdf { width: 100%; padding: 24px; border: 2px dashed var(--borda); border-radius: 6px; text-align: center; font-size: 0.85rem; color: var(--texto-suave); cursor: pointer; display: block; }
+  
   .lista-revisao { margin-top: 16px; border-top: 1px solid var(--borda); padding-top: 12px; }
-  .linha-revisao { display: flex; align-items: center; gap: 8px; padding: 6px 6px; border-radius: 4px; margin-bottom: 4px; }
+  .linha-revisao { display: flex; align-items: center; gap: 8px; padding: 6px; border-radius: 4px; margin-bottom: 4px; }
   .linha-revisao:nth-child(odd) { background: #f8fafc; }
   .linha-revisao-texto { flex: 1; font-family: monospace; font-size: 0.78rem; white-space: pre; overflow-x: auto; }
   .lista-itens .linha-revisao-texto { font-family: inherit; white-space: normal; }
   .linha-revisao select { font-size: 0.75rem; padding: 2px 4px; border-radius: 4px; border: 1px solid var(--borda); }
-  .linha-revisao .grupo-acoes { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
-  .tag-cifra { color: var(--cifra-cor); font-weight: 600; }
-  .tag-letra { color: var(--texto-principal); }
-  .tag-parte { color: var(--primaria); font-weight: 700; }
+  .grupo-acoes { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
   .aviso-conservador { font-size: 0.75rem; color: var(--texto-suave); background: var(--destaque-bg); border: 1px solid #fde68a; padding: 8px; border-radius: 6px; margin-top: 10px; }
-  .item-vazio { font-size: 0.8rem; color: var(--texto-suave); text-align: center; padding: 12px; }
-  .item-erro { font-size: 0.8rem; color: #b91c1c; text-align: center; padding: 12px; }
+  .item-vazio { font-size: 0.8rem; color: var(--texto-suave); text-align: center; padding: 16px; }
+  .item-erro { font-size: 0.8rem; color: #b91c1c; text-align: center; padding: 16px; }
   .btn-mini { padding: 4px 10px; font-size: 0.72rem; }
   .btn-mini-excluir { padding: 4px 7px; font-size: 0.72rem; background: transparent; border: 1px solid var(--borda); color: var(--texto-suave); }
   .btn-mini-excluir:hover { background: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
 
-  /* ===== Toast de aviso ===== */
+  /* Toast */
   .toast-aviso {
     position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(20px);
     background: #111827; color: white; padding: 10px 18px; border-radius: 8px; font-size: 0.85rem;
@@ -286,9 +261,10 @@
   .toast-aviso.visivel { opacity: 1; transform: translateX(-50%) translateY(0); }
 
   @media print {
-    header.topo, nav.indice, .botoes-rodape-parte, .btn-excluir-linha, .btn-icone-limpo, .rodape-add, .modal-fundo, .campo-instrumento, .controles-parte, .toast-aviso { display: none !important; }
+    header.topo, nav.indice, .botoes-rodape-parte, .btn-excluir-linha, .btn-icone-limpo, .rodape-add, .modal-fundo, .campo-instrumento, .controles-parte, .toast-aviso, .barra-abas { display: none !important; }
     body { background: white; padding: 0; color: black; font-size: 11pt; }
     .container { max-width: 100%; padding: 0; }
+    .painel-view { display: block !important; }
     .musica-bloco { break-before: page; margin-bottom: 20px; }
     .musica-bloco.nao-imprimir { display: none !important; }
     .musica-cabecalho { box-shadow: none; border: none; border-bottom: 2px solid #000; padding: 8px 0; margin-bottom: 12px; }
@@ -299,14 +275,11 @@
     .linha-cifra { color: #000; font-weight: bold; overflow: visible; white-space: pre; }
     .linha-obs { color: #333; }
     .linha-letra:empty, .linha-obs:empty { display: none !important; }
-    [contenteditable]:empty:before { display: none !important; content: none !important; }
+    [contenteditable]:empty:before { display: none !important; }
     .mapa-musica { margin: 0 0 10px; }
     .chip-mapa { background: none; border: none; color: #000; padding: 0; font-size: 9pt; cursor: default; }
     .chip-mapa:not(:last-child):after { content: " → "; color: #888; font-weight: 400; }
-    .contexto-impressao {
-      display: block !important; font-size: 7.5pt; text-transform: uppercase; letter-spacing: 0.05em;
-      color: #777; margin-bottom: 4px;
-    }
+    .contexto-impressao { display: block !important; font-size: 7.5pt; text-transform: uppercase; letter-spacing: 0.05em; color: #777; margin-bottom: 4px; }
   }
 
   @media (max-width: 640px) {
@@ -323,30 +296,60 @@
 <header class="topo">
   <div class="topo-conteudo">
     <div class="topo-titulos">
-      <input type="text" class="titulo-repertorio" id="repo-titulo" value="Repertório — Culto de Domingo">
-      <input type="text" class="subtitulo-repertorio" id="repo-subtitulo" value="24/08 · Noite">
+      <input type="text" class="titulo-repertorio" id="repo-titulo" value="Repertório de Culto">
+      <div class="topo-meta-linha">
+        <input type="date" id="repo-data" title="Data do Culto">
+        <input type="text" id="repo-subtitulo" value="Noite · Culto Oficial" placeholder="Período / Descrição...">
+      </div>
     </div>
     <div class="topo-acoes">
-      <button class="btn" onclick="adicionarMusica()">➕ <span class="texto-btn">Nova</span></button>
-      <button class="btn" onclick="abrirModalImportar()">📥 <span class="texto-btn">Importar</span></button>
-      <button class="btn" onclick="abrirBiblioteca()">📚 <span class="texto-btn">Biblioteca</span></button>
-      <button class="btn" onclick="novoRepertorio()">🗓️ <span class="texto-btn">Novo Repertório</span></button>
-      <button class="btn btn-sucesso" onclick="salvarNaNuvem()" id="btn-salvar-nuvem">☁️ <span class="texto-btn">Salvar</span></button>
-      <button class="btn" onclick="abrirListaRepertorios()" id="btn-carregar-nuvem">🔄 <span class="texto-btn">Carregar</span></button>
+      <button class="btn btn-sucesso" onclick="salvarRepertorioNuvem()" id="btn-salvar-nuvem">☁️ <span class="texto-btn">Salvar Repertório</span></button>
+      <button class="btn" onclick="abrirListaRepertorios()">🔄 <span class="texto-btn">Meus Repertórios</span></button>
       <button class="btn btn-primario" onclick="abrirModalImpressao()">📄 <span class="texto-btn">Imprimir</span></button>
       <button class="btn btn-bloqueio" id="btn-bloqueio" onclick="alternarModoVisualizacao()">🔒 <span class="texto-btn">Bloquear</span></button>
     </div>
   </div>
-  <nav class="indice">
-    <div class="indice-lista" id="indice-lista"></div>
-  </nav>
 </header>
 
-<div class="container" id="lista-musicas"></div>
+<!-- Barra de Abas (Separa Culto Atual do Acervo Geral) -->
+<div class="barra-abas">
+  <div class="abas-conteudo">
+    <button class="aba-btn ativa" onclick="mudarAba('culto', this)">🎵 Culto Atual (Repertório)</button>
+    <button class="aba-btn" onclick="mudarAba('biblioteca', this)">📚 Acervo de Cifras (Biblioteca)</button>
+  </div>
+</div>
 
-<div class="container">
-  <div class="rodape-add">
-    <button class="btn" style="width: 100%; justify-content: center; padding: 10px; border-style: dashed;" onclick="adicionarMusica()">➕ Adicionar música ao repertório</button>
+<!-- PAINEL 1: CULTO ATUAL -->
+<div id="painel-culto" class="painel-view ativo">
+  <nav class="indice" id="nav-indice">
+    <div class="indice-lista" id="indice-lista"></div>
+  </nav>
+
+  <div class="container" id="lista-musicas"></div>
+
+  <div class="container">
+    <div class="rodape-add">
+      <button class="btn" style="width: 100%; justify-content: center; padding: 10px; border-style: dashed;" onclick="abrirBibliotecaParaAdicionar()">📚 Puxar músicas do Acervo</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAINEL 2: ACERVO DE CIFRAS (BIBLIOTECA) -->
+<div id="painel-biblioteca" class="painel-view">
+  <div class="container" style="max-width: 900px; padding-bottom: 40px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+      <div>
+        <h2 style="font-size: 1.2rem; font-weight: 700;">Acervo Geral de Cifras</h2>
+        <p style="font-size: 0.8rem; color: var(--texto-suave);">Importe e gerencie suas cifras aqui. Elas ficam salvas permanentemente para montar qualquer culto.</p>
+      </div>
+      <button class="btn btn-primario" onclick="abrirModalImportar()">📥 Importar Nova Cifra</button>
+    </div>
+
+    <input type="text" class="input-busca" id="busca-biblioteca-tab" placeholder="Buscar música no acervo por título ou autor...">
+    
+    <div class="parte" style="padding: 12px 16px;">
+      <div id="lista-biblioteca-completa"><p class="item-vazio">Carregando acervo...</p></div>
+    </div>
   </div>
 </div>
 
@@ -356,18 +359,18 @@
     <h3>Opções de Impressão</h3>
     <p>Selecione o formato para gerar o material em papel.</p>
     <div class="modal-opcao" onclick="confirmarImpressao('atual')">🎵 Somente a música atual em foco</div>
-    <div class="modal-opcao" onclick="confirmarImpressao('todas')">📚 Repertório completo</div>
+    <div class="modal-opcao" onclick="confirmarImpressao('todas')">📚 Repertório completo do culto</div>
     <div class="modal-botoes">
       <button class="btn" onclick="fecharModal('modal-impressao')">Cancelar</button>
     </div>
   </div>
 </div>
 
-<!-- Modal Importação -->
+<!-- Modal Importação (Agora focada no Acervo) -->
 <div class="modal-fundo" id="modal-importar">
   <div class="modal-caixa larga">
-    <h3>Importar Cifra</h3>
-    <p>Cole o texto pronto ou carregue um arquivo PDF para processamento.</p>
+    <h3>Importar Cifra para o Acervo</h3>
+    <p>Cole o texto pronto ou carregue um arquivo PDF. A música será salva diretamente no seu acervo geral.</p>
 
     <div class="abas-importar">
       <div class="aba-importar ativa" id="aba-texto" onclick="trocarAbaImportar('texto')">Colar Texto</div>
@@ -390,7 +393,7 @@
     </div>
 
     <div class="aviso-conservador">
-      ⚠️ O sistema classifica automaticamente o que é cifra e letra. Você pode revisar e ajustar cada linha abaixo antes de confirmar.
+      ⚠️ O sistema classifica automaticamente o que é cifra e letra. Revise abaixo antes de enviar para o acervo.
     </div>
 
     <div class="lista-revisao" id="lista-revisao" style="display:none;">
@@ -400,31 +403,31 @@
 
     <div class="modal-botoes">
       <button class="btn" onclick="fecharModal('modal-importar')">Cancelar</button>
-      <button class="btn btn-primario" id="btn-confirmar-importacao" style="display:none;" onclick="adicionarMusicaImportada()">Confirmar e Adicionar</button>
+      <button class="btn btn-primario" id="btn-confirmar-importacao" style="display:none;" onclick="salvarMusicaImportadaNoAcervo()">Salvar no Acervo</button>
     </div>
   </div>
 </div>
 
-<!-- Modal Biblioteca de Músicas -->
-<div class="modal-fundo" id="modal-biblioteca">
+<!-- Modal Escolher do Acervo (para montar o Culto) -->
+<div class="modal-fundo" id="modal-escolher-acervo">
   <div class="modal-caixa larga">
-    <h3>Biblioteca de Músicas</h3>
-    <p>Músicas salvas que podem ser reaproveitadas em qualquer repertório.</p>
-    <input type="text" class="input-busca" id="busca-biblioteca" placeholder="Buscar por título...">
+    <h3>Adicionar Músicas do Acervo</h3>
+    <p>Selecione uma ou mais músicas salvas no seu acervo para incluir no culto atual.</p>
+    <input type="text" class="input-busca" id="busca-modal-acervo" placeholder="Buscar no acervo...">
     <div class="lista-revisao lista-itens" style="border-top:none; margin-top:0; padding-top:0;">
-      <div id="lista-biblioteca-itens"></div>
+      <div id="lista-escolher-acervo-itens"></div>
     </div>
     <div class="modal-botoes">
-      <button class="btn" onclick="fecharModal('modal-biblioteca')">Fechar</button>
+      <button class="btn" onclick="fecharModal('modal-escolher-acervo')">Concluir</button>
     </div>
   </div>
 </div>
 
-<!-- Modal Repertórios Salvos -->
+<!-- Modal Meus Repertórios Salvos -->
 <div class="modal-fundo" id="modal-repertorios">
   <div class="modal-caixa larga">
     <h3>Repertórios Salvos</h3>
-    <p>Selecione um repertório salvo na planilha para carregar na tela.</p>
+    <p>Selecione um culto anterior salvo na planilha para carregar.</p>
     <input type="text" class="input-busca" id="busca-repertorios" placeholder="Buscar por título ou data...">
     <div class="lista-revisao lista-itens" style="border-top:none; margin-top:0; padding-top:0;">
       <div id="lista-repertorios-itens"></div>
@@ -435,7 +438,7 @@
   </div>
 </div>
 
-<!-- Modal de Confirmação genérico (substitui confirm()/alert() nativos) -->
+<!-- Modal de Confirmação genérico -->
 <div class="modal-fundo" id="modal-confirmacao">
   <div class="modal-caixa">
     <h3 id="confirmacao-titulo">Confirmar ação</h3>
@@ -456,11 +459,6 @@ let musicaAtualId = null;
 let repertorioAtualId = null;
 let bibliotecaCache = [];
 let repertoriosCache = [];
-
-// ==========================================
-// AVISOS E CONFIRMAÇÕES (sem depender de alert()/confirm() nativos,
-// que podem não funcionar em WebViews de apps de terceiros)
-// ==========================================
 
 function mostrarAviso(texto) {
   const toast = document.getElementById('toast-aviso');
@@ -490,56 +488,54 @@ function escaparHtml(texto) {
 
 function gerarId() { return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).substr(2, 9); }
 
+function mudarAba(aba, btn) {
+  document.querySelectorAll('.aba-btn').forEach(b => b.classList.remove('ativa'));
+  btn.classList.add('ativa');
+  document.getElementById('painel-culto').classList.toggle('ativo', aba === 'culto');
+  document.getElementById('painel-biblioteca').classList.toggle('ativo', aba === 'biblioteca');
+  if (aba === 'biblioteca') carregarBibliotecaCompleta();
+}
+
 // ==========================================
-// RASCUNHO LOCAL
+// RASCUNHO LOCAL E DATA DO CULTO
 // ==========================================
+
+function obterDataHojeFormatada() {
+  const hoje = new Date();
+  return hoje.toISOString().split('T')[0];
+}
 
 function salvarLocal() {
   const dados = {
     id: repertorioAtualId,
     titulo: document.getElementById('repo-titulo').value,
+    data: document.getElementById('repo-data').value,
     subtitulo: document.getElementById('repo-subtitulo').value,
     html: document.getElementById('lista-musicas').innerHTML
   };
-  localStorage.setItem('repertorioDraftPro', JSON.stringify(dados));
+  localStorage.setItem('repertorioDraftPro2', JSON.stringify(dados));
 }
 
 function carregarLocal() {
-  const salvo = localStorage.getItem('repertorioDraftPro');
+  const salvo = localStorage.getItem('repertorioDraftPro2');
   if (salvo) {
     const dados = JSON.parse(salvo);
     repertorioAtualId = dados.id || null;
-    document.getElementById('repo-titulo').value = dados.titulo || '';
+    document.getElementById('repo-titulo').value = dados.titulo || 'Repertório de Culto';
+    document.getElementById('repo-data').value = dados.data || obterDataHojeFormatada();
     document.getElementById('repo-subtitulo').value = dados.subtitulo || '';
     document.getElementById('lista-musicas').innerHTML = dados.html || '';
-    if (!document.querySelector('.musica-bloco')) adicionarMusica(true);
+    if (!document.querySelector('.musica-bloco')) adicionarMusicaVazia(true);
   } else {
-    adicionarMusica(true);
+    document.getElementById('repo-data').value = obterDataHojeFormatada();
+    adicionarMusicaVazia(true);
   }
   observarMusicas();
   renderizarIndice();
 }
 
-function novoRepertorio() {
-  confirmarAcao(
-    'O rascunho atual na tela será substituído por um repertório em branco. Se quiser manter o de agora, salve antes de continuar.',
-    () => {
-      repertorioAtualId = null;
-      document.getElementById('repo-titulo').value = 'Repertório — Culto de Domingo';
-      document.getElementById('repo-subtitulo').value = '';
-      document.getElementById('lista-musicas').innerHTML = '';
-      adicionarMusica(true);
-      observarMusicas();
-      renderizarIndice();
-      salvarLocal();
-      mostrarAviso('Repertório em branco iniciado.');
-    },
-    'Começar um repertório novo?'
-  );
-}
-
 // ==========================================
-// MONTAGEM DE MÚSICA / PARTE / LINHA (funções compartilhadas)
+// MONTAGEM DE ESTRUTURA VISUAL
 // ==========================================
 
 function criarHtmlLinha(l) {
@@ -599,24 +595,24 @@ function criarBlocoMusica(m, focar) {
       <div class="musica-info-principal">
         <div class="musica-titulo-linha">
           <input type="text" class="musica-titulo" value="${escaparHtml(m.titulo || 'Nova Música')}">
-          <button class="btn-icone-limpo" onclick="salvarMusicaNaBiblioteca(this)" title="Salvar esta música na biblioteca">📚</button>
-          <button class="btn-icone-limpo" onclick="removerMusica(this)" title="Excluir música">🗑️</button>
+          <button class="btn-icone-limpo" onclick="salvarMusicaNoAcervoDireto(this)" title="Atualizar ou salvar no acervo geral">📚</button>
+          <button class="btn-icone-limpo" onclick="removerMusica(this)" title="Remover do culto">🗑️</button>
         </div>
         <div class="musica-meta">
           <div class="musica-meta-linha">
             <span>Autores: <input type="text" class="campo-autores" value="${escaparHtml(m.autores || '')}"></span>
           </div>
-          <div class="campo-instrumento" title="Instrumentos e orientações gerais para a execução">
+          <div class="campo-instrumento" title="Instrumentos e orientações gerais">
             <span>🎸 Inst/Obs geral:</span> <input type="text" value="${escaparHtml(m.instrumento || '')}" placeholder="Ex: Violão base, Solo de guitarra, Teclado pad...">
           </div>
         </div>
       </div>
       <div class="badges-musica">
-        <div class="tom-badge" title="Tom da música">
+        <div class="tom-badge" title="Tom">
           <span class="tom-rotulo">Tom</span>
           <input type="text" class="tom-valor" value="${escaparHtml(m.tom || 'C')}">
         </div>
-        <div class="tom-badge" title="Andamento (batidas por minuto)">
+        <div class="tom-badge" title="BPM">
           <span class="tom-rotulo">BPM</span>
           <input type="text" class="bpm-valor" value="${escaparHtml(m.bpm || '')}">
         </div>
@@ -640,10 +636,6 @@ function criarBlocoMusica(m, focar) {
   }
   return bloco;
 }
-
-// ==========================================
-// MAPA DA MÚSICA (roteiro resumido, tipo "V1 Pr R1 R2 P")
-// ==========================================
 
 function calcularCodigoParte(parte) {
   const codigoInput = parte.querySelector('.campo-codigo-parte');
@@ -675,9 +667,9 @@ document.addEventListener('click', (e) => {
   }
 });
 
-function adicionarMusica(isInit = false) {
+function adicionarMusicaVazia(isInit = false) {
   criarBlocoMusica({
-    titulo: 'Nova Música', autores: 'Autor / Ministração', instrumento: '', tom: 'G', bpm: '', compasso: '4/4',
+    titulo: 'Nova Música', autores: '', instrumento: '', tom: 'G', bpm: '', compasso: '4/4',
     partes: [{ nome: 'VERSO 1', codigo: '', repeticao: '1x', intensidade: 'Médio', observacao: '', linhas: [{ cifra: '', letra: '', observacao: '' }] }]
   }, !isInit);
   observarMusicas();
@@ -743,43 +735,44 @@ function extrairDadosMusica(bloco) {
   return musica;
 }
 
-function extrairDadosEstruturados() {
+function extrairDadosRepertorio() {
   return {
     id: repertorioAtualId,
     titulo: document.getElementById('repo-titulo').value,
+    data: document.getElementById('repo-data').value,
     subtitulo: document.getElementById('repo-subtitulo').value,
     musicas: Array.from(document.querySelectorAll('.musica-bloco')).map(extrairDadosMusica)
   };
 }
 
 // ==========================================
-// INTEGRAÇÃO GOOGLE SHEETS — REPERTÓRIOS (multi-repertório por id)
+// GOOGLE SHEETS — REPERTÓRIOS
 // ==========================================
 
-async function salvarNaNuvem() {
+async function salvarRepertorioNuvem() {
   const btn = document.getElementById('btn-salvar-nuvem');
-  const textoOriginal = btn.innerHTML;
+  const original = btn.innerHTML;
   btn.innerHTML = "⏳ Salvando...";
   btn.disabled = true;
 
-  const dados = extrairDadosEstruturados();
+  const dados = extrairDadosRepertorio();
   dados.acao = 'salvarRepertorio';
 
   try {
-    const resposta = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify(dados) });
-    const resultado = await resposta.json();
-    if (resultado.status === "sucesso") {
-      repertorioAtualId = resultado.id;
+    const resp = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify(dados) });
+    const res = await resp.json();
+    if (res.status === "sucesso") {
+      repertorioAtualId = res.id;
       salvarLocal();
-      mostrarAviso("Repertório salvo com sucesso na planilha!");
+      mostrarAviso("Repertório salvo com sucesso na nuvem!");
     } else {
-      mostrarAviso("Erro ao salvar na planilha.");
+      mostrarAviso("Erro ao salvar repertório.");
     }
-  } catch (erro) {
-    console.error(erro);
+  } catch (e) {
+    console.error(e);
     mostrarAviso("Erro de conexão com o Google Sheets.");
   } finally {
-    btn.innerHTML = textoOriginal;
+    btn.innerHTML = original;
     btn.disabled = false;
   }
 }
@@ -788,400 +781,215 @@ async function abrirListaRepertorios() {
   document.getElementById('modal-repertorios').classList.add('aberto');
   document.getElementById('busca-repertorios').value = '';
   const container = document.getElementById('lista-repertorios-itens');
-  container.innerHTML = '<p class="item-vazio">Carregando...</p>';
+  container.innerHTML = '<p class="item-vazio">Carregando repertórios...</p>';
   try {
     const resp = await fetch(APPS_SCRIPT_URL + '?acao=listarRepertorios&_=' + Date.now(), { cache: 'no-store' });
     const dados = await resp.json();
     repertoriosCache = dados.repertorios || [];
-    renderizarRepertorios(repertoriosCache);
+    renderizarListaRepertorios(repertoriosCache);
   } catch (e) {
     console.error(e);
-    container.innerHTML = '<p class="item-erro">Erro ao carregar a lista de repertórios.</p>';
+    container.innerHTML = '<p class="item-erro">Erro ao carregar lista de repertórios.</p>';
   }
 }
 
-function renderizarRepertorios(lista) {
+function renderizarListaRepertorios(lista) {
   const container = document.getElementById('lista-repertorios-itens');
   if (!lista.length) {
-    container.innerHTML = '<p class="item-vazio">Nenhum repertório salvo ainda.</p>';
+    container.innerHTML = '<p class="item-vazio">Nenhum repertório salvo na nuvem.</p>';
     return;
   }
   container.innerHTML = lista.map(r => `
     <div class="linha-revisao">
       <span class="linha-revisao-texto">
-        <strong>${escaparHtml(r.titulo)}</strong><br>
-        <span style="color:var(--texto-suave);font-size:0.72rem;">${escaparHtml(r.subtitulo || '')} · ${formatarData(r.dataHora)}</span>
+        <strong>${escaparHtml(r.titulo)}</strong> (${r.data || 'Sem data'})<br>
+        <span style="color:var(--texto-suave);font-size:0.75rem;">${escaparHtml(r.subtitulo || '')}</span>
       </span>
       <div class="grupo-acoes">
-        <button class="btn btn-mini-excluir" onclick="confirmarExcluirRepertorio('${r.id}')" title="Excluir repertório">🗑️</button>
-        <button class="btn btn-primario btn-mini" onclick="confirmarCarregarRepertorio('${r.id}')">Carregar</button>
+        <button class="btn btn-mini-excluir" onclick="confirmarExcluirRepertorio('${r.id}')" title="Excluir">🗑️</button>
+        <button class="btn btn-primario btn-mini" onclick="carregarRepertorioDaNuvem('${r.id}')">Carregar</button>
       </div>
     </div>`).join('');
 }
 
 function filtrarRepertorios(termo) {
   const t = termo.toLowerCase();
-  renderizarRepertorios(repertoriosCache.filter(r =>
-    (r.titulo || '').toLowerCase().includes(t) || (r.subtitulo || '').toLowerCase().includes(t)
+  renderizarListaRepertorios(repertoriosCache.filter(r =>
+    (r.titulo || '').toLowerCase().includes(t) || (r.subtitulo || '').toLowerCase().includes(t) || (r.data || '').includes(t)
   ));
 }
 
-function formatarData(valor) {
-  try {
-    return new Date(valor).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-  } catch (e) {
-    return valor;
-  }
-}
-
-function confirmarCarregarRepertorio(id) {
-  confirmarAcao(
-    'Isso vai substituir o rascunho atual na tela.',
-    () => { fecharModal('modal-repertorios'); carregarRepertorioPorId(id); },
-    'Carregar este repertório?'
-  );
-}
-
-function confirmarExcluirRepertorio(id) {
-  confirmarAcao(
-    'Esta ação não pode ser desfeita — o repertório será apagado da planilha.',
-    async () => {
-      try {
-        const resp = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'excluirRepertorio', id }) });
-        const resultado = await resp.json();
-        if (resultado.status === 'sucesso') {
-          mostrarAviso('Repertório excluído.');
-          abrirListaRepertorios();
-        } else {
-          mostrarAviso('Erro ao excluir repertório.');
-        }
-      } catch (e) {
-        console.error(e);
-        mostrarAviso('Erro de conexão ao excluir.');
-      }
-    },
-    'Excluir este repertório da planilha?'
-  );
-}
-
-async function carregarRepertorioPorId(id) {
-  const btn = document.getElementById('btn-carregar-nuvem');
-  const original = btn.innerHTML;
-  btn.textContent = "🔄 Carregando...";
-  btn.disabled = true;
-
+async function carregarRepertorioDaNuvem(id) {
   try {
     const resp = await fetch(APPS_SCRIPT_URL + '?acao=carregarRepertorio&id=' + encodeURIComponent(id) + '&_=' + Date.now(), { cache: 'no-store' });
-    const dados = await resp.json();
+    const r = await resp.json();
+    if (r.status !== 'sucesso') { mostrarAviso('Repertório não encontrado.'); return; }
 
-    if (dados.status !== 'sucesso') {
-      mostrarAviso('Repertório não encontrado.');
-      return;
-    }
-
-    document.getElementById('repo-titulo').value = dados.titulo || '';
-    document.getElementById('repo-subtitulo').value = dados.subtitulo || '';
-    repertorioAtualId = dados.id;
+    document.getElementById('repo-titulo').value = r.titulo || 'Repertório de Culto';
+    document.getElementById('repo-data').value = r.data || obterDataHojeFormatada();
+    document.getElementById('repo-subtitulo').value = r.subtitulo || '';
+    repertorioAtualId = r.id;
 
     const container = document.getElementById('lista-musicas');
     container.innerHTML = '';
-    dados.musicas.forEach(m => criarBlocoMusica(m, false));
+    r.musicas.forEach(m => criarBlocoMusica(m, false));
 
+    fecharModal('modal-repertorios');
     observarMusicas();
     renderizarIndice();
     salvarLocal();
-    mostrarAviso("Repertório carregado com sucesso!");
+    mostrarAviso('Repertório carregado com sucesso!');
   } catch (e) {
     console.error(e);
-    mostrarAviso("Erro ao carregar dados da nuvem.");
-  } finally {
-    btn.innerHTML = original;
-    btn.disabled = false;
+    mostrarAviso('Erro ao carregar repertório.');
   }
 }
 
+function confirmarExcluirRepertorio(id) {
+  confirmarAcao('O repertório será apagado permanentemente da planilha.', async () => {
+    try {
+      const resp = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'excluirRepertorio', id }) });
+      const res = await resp.json();
+      if (res.status === 'sucesso') { mostrarAviso('Repertório excluído.'); abrirListaRepertorios(); }
+      else { mostrarAviso('Erro ao excluir.'); }
+    } catch (e) { mostrarAviso('Erro de conexão.'); }
+  }, 'Excluir este repertório?');
+}
+
 // ==========================================
-// INTEGRAÇÃO GOOGLE SHEETS — BIBLIOTECA DE MÚSICAS
+// GOOGLE SHEETS — ACERVO (BIBLIOTECA)
 // ==========================================
 
-async function abrirBiblioteca() {
-  document.getElementById('modal-biblioteca').classList.add('aberto');
-  document.getElementById('busca-biblioteca').value = '';
-  const container = document.getElementById('lista-biblioteca-itens');
-  container.innerHTML = '<p class="item-vazio">Carregando...</p>';
+async function carregarBibliotecaCompleta() {
+  const container = document.getElementById('lista-biblioteca-completa');
+  container.innerHTML = '<p class="item-vazio">Carregando acervo...</p>';
   try {
     const resp = await fetch(APPS_SCRIPT_URL + '?acao=listarBiblioteca&_=' + Date.now(), { cache: 'no-store' });
     const dados = await resp.json();
     bibliotecaCache = dados.musicas || [];
-    renderizarBiblioteca(bibliotecaCache);
+    renderizarBibliotecaCompleta(bibliotecaCache);
   } catch (e) {
     console.error(e);
-    container.innerHTML = '<p class="item-erro">Erro ao carregar a biblioteca.</p>';
+    container.innerHTML = '<p class="item-erro">Erro ao carregar acervo da nuvem.</p>';
   }
 }
 
-function renderizarBiblioteca(lista) {
-  const container = document.getElementById('lista-biblioteca-itens');
+function renderizarBibliotecaCompleta(lista) {
+  const container = document.getElementById('lista-biblioteca-completa');
   if (!lista.length) {
-    container.innerHTML = '<p class="item-vazio">Nenhuma música salva na biblioteca ainda. Use o ícone 📚 no cabeçalho de uma música para salvá-la aqui.</p>';
+    container.innerHTML = '<p class="item-vazio">Nenhuma música no acervo. Clique em "Importar Nova Cifra" para começar.</p>';
     return;
   }
   container.innerHTML = lista.map(m => `
     <div class="linha-revisao">
       <span class="linha-revisao-texto">
         <strong>${escaparHtml(m.titulo)}</strong>
-        <span style="color:var(--texto-suave);"> — ${escaparHtml(m.autores || 'sem autor')} (Tom ${escaparHtml(m.tom || '-')})</span>
+        <span style="color:var(--texto-suave);"> — ${escaparHtml(m.autores || 'Sem autor')} (Tom ${escaparHtml(m.tom || '-')})</span>
       </span>
       <div class="grupo-acoes">
-        <button class="btn btn-mini-excluir" onclick="confirmarExcluirMusica('${m.id}')" title="Excluir da biblioteca">🗑️</button>
-        <button class="btn btn-primario btn-mini" onclick="inserirMusicaDaBiblioteca('${m.id}')">＋ Adicionar</button>
+        <button class="btn btn-mini-excluir" onclick="confirmarExcluirMusicaAcervo('${m.id}')" title="Excluir do acervo">🗑️</button>
+        <button class="btn btn-primario btn-mini" onclick="adicionarMusicaAcervoNoCulto('${m.id}')">＋ Incluir no Culto</button>
       </div>
     </div>`).join('');
 }
 
-function filtrarBiblioteca(termo) {
+function filtrarBibliotecaTab(termo) {
   const t = termo.toLowerCase();
-  renderizarBiblioteca(bibliotecaCache.filter(m => (m.titulo || '').toLowerCase().includes(t)));
+  renderizarBibliotecaCompleta(bibliotecaCache.filter(m => (m.titulo || '').toLowerCase().includes(t) || (m.autores || '').toLowerCase().includes(t)));
 }
 
-async function inserirMusicaDaBiblioteca(id) {
+async function abrirBibliotecaParaAdicionar() {
+  document.getElementById('modal-escolher-acervo').classList.add('aberto');
+  document.getElementById('busca-modal-acervo').value = '';
+  const container = document.getElementById('lista-escolher-acervo-itens');
+  container.innerHTML = '<p class="item-vazio">Carregando acervo...</p>';
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL + '?acao=listarBiblioteca&_=' + Date.now(), { cache: 'no-store' });
+    const dados = await resp.json();
+    bibliotecaCache = dados.musicas || [];
+    renderizarModalAcervo(bibliotecaCache);
+  } catch (e) {
+    container.innerHTML = '<p class="item-erro">Erro ao carregar acervo.</p>';
+  }
+}
+
+function renderizarModalAcervo(lista) {
+  const container = document.getElementById('lista-escolher-acervo-itens');
+  if (!lista.length) {
+    container.innerHTML = '<p class="item-vazio">Seu acervo está vazio.</p>';
+    return;
+  }
+  container.innerHTML = lista.map(m => `
+    <div class="linha-revisao">
+      <span class="linha-revisao-texto">
+        <strong>${escaparHtml(m.titulo)}</strong> (${escaparHtml(m.tom || '-')})
+      </span>
+      <button class="btn btn-primario btn-mini" onclick="adicionarMusicaAcervoNoCulto('${m.id}'); fecharModal('modal-escolher-acervo');">＋ Adicionar</button>
+    </div>`).join('');
+}
+
+function filtrarModalAcervo(termo) {
+  const t = termo.toLowerCase();
+  renderizarModalAcervo(bibliotecaCache.filter(m => (m.titulo || '').toLowerCase().includes(t)));
+}
+
+async function adicionarMusicaAcervoNoCulto(id) {
   try {
     const resp = await fetch(APPS_SCRIPT_URL + '?acao=carregarMusica&id=' + encodeURIComponent(id) + '&_=' + Date.now(), { cache: 'no-store' });
     const m = await resp.json();
-    if (m.status !== 'sucesso') { mostrarAviso('Não foi possível carregar essa música.'); return; }
-    criarBlocoMusica({ titulo: m.titulo, autores: m.autores, instrumento: m.instrumento, tom: m.tom, partes: m.partes, bibliotecaId: m.id }, true);
-    fecharModal('modal-biblioteca');
+    if (m.status !== 'sucesso') { mostrarAviso('Música não encontrada.'); return; }
+    
+    criarBlocoMusica({
+      titulo: m.titulo, autores: m.autores, instrumento: m.instrumento, tom: m.tom, bpm: m.bpm, compasso: m.compasso, partes: m.partes, bibliotecaId: m.id
+    }, true);
+    
     observarMusicas();
     renderizarIndice();
     salvarLocal();
-    mostrarAviso('Música adicionada ao repertório.');
+    mostrarAviso('Música adicionada ao culto atual.');
   } catch (e) {
-    console.error(e);
-    mostrarAviso('Erro de conexão com a biblioteca.');
+    mostrarAviso('Erro ao puxar música do acervo.');
   }
 }
 
-async function salvarMusicaNaBiblioteca(btn) {
+async function salvarMusicaNoAcervoDireto(btn) {
   const bloco = btn.closest('.musica-bloco');
-  const dadosMusica = extrairDadosMusica(bloco);
-  dadosMusica.acao = 'salvarMusica';
-  dadosMusica.id = bloco.dataset.bibliotecaId || null;
+  const dados = extrairDadosMusica(bloco);
+  dados.acao = 'salvarMusica';
+  dados.id = bloco.dataset.bibliotecaId || null;
 
-  const textoOriginal = btn.textContent;
+  const original = btn.textContent;
   btn.textContent = '⏳';
   try {
-    const resp = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify(dadosMusica) });
-    const resultado = await resp.json();
-    if (resultado.status === 'sucesso') {
-      bloco.dataset.bibliotecaId = resultado.id;
-      mostrarAviso('Música salva na biblioteca!');
+    const resp = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify(dados) });
+    const res = await resp.json();
+    if (res.status === 'sucesso') {
+      bloco.dataset.bibliotecaId = res.id;
+      mostrarAviso('Música atualizada/salva no acervo geral!');
     } else {
-      mostrarAviso('Erro ao salvar música na biblioteca.');
+      mostrarAviso('Erro ao salvar no acervo.');
     }
   } catch (e) {
-    console.error(e);
-    mostrarAviso('Erro de conexão com a biblioteca.');
+    mostrarAviso('Erro de conexão com o acervo.');
   } finally {
-    btn.textContent = textoOriginal;
+    btn.textContent = original;
   }
 }
 
-function confirmarExcluirMusica(id) {
-  confirmarAcao(
-    'Esta ação não pode ser desfeita — a música será apagada da biblioteca (repertórios que já usam ela não são afetados).',
-    async () => {
-      try {
-        const resp = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'excluirMusica', id }) });
-        const resultado = await resp.json();
-        if (resultado.status === 'sucesso') {
-          mostrarAviso('Música excluída da biblioteca.');
-          abrirBiblioteca();
-        } else {
-          mostrarAviso('Erro ao excluir música.');
-        }
-      } catch (e) {
-        console.error(e);
-        mostrarAviso('Erro de conexão ao excluir.');
-      }
-    },
-    'Excluir esta música da biblioteca?'
-  );
+function confirmarExcluirMusicaAcervo(id) {
+  confirmarAcao('A música será removida do acervo geral.', async () => {
+    try {
+      const resp = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'excluirMusica', id }) });
+      const res = await resp.json();
+      if (res.status === 'sucesso') { mostrarAviso('Música excluída do acervo.'); carregarBibliotecaCompleta(); }
+      else { mostrarAviso('Erro ao excluir.'); }
+    } catch (e) { mostrarAviso('Erro de conexão.'); }
+  }, 'Excluir do acervo?');
 }
 
 // ==========================================
-// CONTROLES DE PARTES (MOVER, DUPLICAR, EXCLUIR)
+// IMPORTAÇÃO PARA O ACERVO
 // ==========================================
-
-function moverParte(btn, direcao) {
-  const parte = btn.closest('.parte');
-  const bloco = parte.closest('.musica-bloco');
-  if (direcao === 'cima' && parte.previousElementSibling && parte.previousElementSibling.classList.contains('parte')) {
-    parte.parentElement.insertBefore(parte, parte.previousElementSibling);
-  } else if (direcao === 'baixo' && parte.nextElementSibling && parte.nextElementSibling.classList.contains('parte')) {
-    parte.parentElement.insertBefore(parte.nextElementSibling, parte);
-  }
-  renderizarMapaMusica(bloco);
-  salvarLocal();
-}
-
-function duplicarParte(btn) {
-  const parte = btn.closest('.parte');
-  const bloco = parte.closest('.musica-bloco');
-  const clone = parte.cloneNode(true);
-  clone.id = gerarId();
-  const nomeInput = clone.querySelector('.nome-parte');
-  nomeInput.value = nomeInput.value + ' (cópia)';
-  parte.after(clone);
-  clone.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  nomeInput.focus();
-  nomeInput.select();
-  renderizarMapaMusica(bloco);
-  salvarLocal();
-}
-
-function removerParte(btn) {
-  const musica = btn.closest('.musica-bloco');
-  if (musica.querySelectorAll('.parte').length <= 1) {
-    mostrarAviso('A música precisa ter ao menos uma parte.');
-    return;
-  }
-  confirmarAcao('Esta ação não pode ser desfeita.', () => {
-    btn.closest('.parte').remove();
-    renderizarMapaMusica(musica);
-    salvarLocal();
-  }, 'Excluir esta parte?');
-}
-
-// ==========================================
-// MANIPULAÇÃO DE DOM E EVENTOS LOCAIS
-// ==========================================
-
-let timeoutSalvar;
-document.addEventListener('input', (e) => {
-  if (e.target.id === 'busca-biblioteca') { filtrarBiblioteca(e.target.value); return; }
-  if (e.target.id === 'busca-repertorios') { filtrarRepertorios(e.target.value); return; }
-  clearTimeout(timeoutSalvar);
-  timeoutSalvar = setTimeout(() => {
-    salvarLocal();
-    if (e.target.classList.contains('musica-titulo')) renderizarIndice();
-    if (e.target.classList.contains('nome-parte') || e.target.classList.contains('campo-codigo-parte')) {
-      const bloco = e.target.closest('.musica-bloco');
-      if (bloco) renderizarMapaMusica(bloco);
-    }
-  }, 800);
-});
-
-document.addEventListener('keydown', function(e) {
-  const editavel = e.target.hasAttribute('contenteditable') && e.target.getAttribute('contenteditable') !== "false";
-  const ehLinhaDoGrupo = e.target.classList.contains('linha-cifra') || e.target.classList.contains('linha-letra') || e.target.classList.contains('linha-obs');
-
-  if (editavel && ehLinhaDoGrupo && e.key === 'Enter') {
-    e.preventDefault();
-    if (e.shiftKey) { document.execCommand('insertLineBreak'); return; }
-
-    const grupo = e.target.closest('.linha-grupo');
-    if (grupo) {
-      const wrapper = document.createElement('div');
-      wrapper.innerHTML = criarHtmlLinha({ cifra: '', letra: '', observacao: '' });
-      const novoGrupo = wrapper.firstElementChild;
-      grupo.after(novoGrupo);
-      const classeAlvo = e.target.classList.contains('linha-cifra') ? '.linha-cifra'
-        : e.target.classList.contains('linha-letra') ? '.linha-letra' : '.linha-obs';
-      novoGrupo.querySelector(classeAlvo).focus();
-      salvarLocal();
-    }
-  }
-});
-
-document.addEventListener('paste', function(e) {
-  if (e.target.hasAttribute('contenteditable')) {
-    e.preventDefault();
-    const textoPuro = (e.originalEvent || e).clipboardData.getData('text/plain');
-    document.execCommand('insertText', false, textoPuro);
-  }
-});
-
-function removerLinha(btn) {
-  btn.closest('.linha-grupo').remove();
-  salvarLocal();
-}
-
-function adicionarLinhaNaParte(btn) {
-  const parte = btn.closest('.parte');
-  const wrapper = document.createElement('div');
-  wrapper.innerHTML = criarHtmlLinha({ cifra: '', letra: '', observacao: '' });
-  const novoGrupo = wrapper.firstElementChild;
-  parte.insertBefore(novoGrupo, parte.querySelector('.botoes-rodape-parte'));
-  novoGrupo.querySelector('.linha-cifra').focus();
-  salvarLocal();
-}
-
-function removerMusica(btn) {
-  if (document.querySelectorAll('.musica-bloco').length <= 1) {
-    mostrarAviso('Mantenha pelo menos uma música no repertório.');
-    return;
-  }
-  confirmarAcao('Esta ação não pode ser desfeita.', () => {
-    btn.closest('.musica-bloco').remove();
-    renderizarIndice();
-    salvarLocal();
-  }, 'Remover esta música?');
-}
-
-function alternarModoVisualizacao() {
-  const modoVis = document.body.classList.toggle('modo-visualizacao');
-  const btn = document.getElementById('btn-bloqueio');
-  btn.innerHTML = modoVis ? '✏️ <span class="texto-btn">Editar</span>' : '🔒 <span class="texto-btn">Bloquear</span>';
-  document.querySelectorAll('[contenteditable]').forEach(el => el.setAttribute('contenteditable', !modoVis));
-  document.querySelectorAll('input').forEach(el => el.readOnly = modoVis);
-}
-
-const observador = new IntersectionObserver((entradas) => {
-  entradas.forEach(entrada => {
-    if (entrada.isIntersecting) { musicaAtualId = entrada.target.id; renderizarIndice(); }
-  });
-}, { rootMargin: '-100px 0px -60% 0px', threshold: 0 });
-
-function observarMusicas() {
-  observador.disconnect();
-  document.querySelectorAll('.musica-bloco').forEach(b => observador.observe(b));
-}
-
-function renderizarIndice() {
-  const lista = document.getElementById('indice-lista');
-  lista.innerHTML = '';
-  const blocos = document.querySelectorAll('.musica-bloco');
-  blocos.forEach((bloco, i) => {
-    const titulo = bloco.querySelector('.musica-titulo').value || 'Sem título';
-    const item = document.createElement('div');
-    item.className = 'indice-item' + (bloco.id === musicaAtualId ? ' ativo' : '');
-    item.innerHTML = `
-      <span class="indice-num">${i + 1}</span>
-      <span class="indice-link" data-alvo="${bloco.id}">${escaparHtml(titulo)}</span>
-      <button class="indice-seta" data-mover="cima" data-id="${bloco.id}" ${i === 0 ? 'disabled style="visibility:hidden"' : ''}>▲</button>
-      <button class="indice-seta" data-mover="baixo" data-id="${bloco.id}" ${i === blocos.length - 1 ? 'disabled style="visibility:hidden"' : ''}>▼</button>
-    `;
-    lista.appendChild(item);
-  });
-  lista.querySelectorAll('.indice-link').forEach(el => {
-    el.addEventListener('click', () => document.getElementById(el.dataset.alvo).scrollIntoView({ behavior: 'smooth' }));
-  });
-  lista.querySelectorAll('.indice-seta').forEach(el => {
-    el.addEventListener('click', () => moverMusica(el.dataset.id, el.dataset.mover));
-  });
-}
-
-function moverMusica(id, direcao) {
-  const bloco = document.getElementById(id);
-  if (direcao === 'cima' && bloco.previousElementSibling && bloco.previousElementSibling.classList.contains('musica-bloco')) {
-    bloco.parentElement.insertBefore(bloco, bloco.previousElementSibling);
-  } else if (direcao === 'baixo' && bloco.nextElementSibling && bloco.nextElementSibling.classList.contains('musica-bloco')) {
-    bloco.parentElement.insertBefore(bloco.nextElementSibling, bloco);
-  }
-  renderizarIndice();
-  salvarLocal();
-  bloco.scrollIntoView({ behavior: 'smooth', block: 'center' });
-}
 
 let linhasClassificadas = [];
 function abrirModalImportar() { document.getElementById('modal-importar').classList.add('aberto'); }
@@ -1268,7 +1076,7 @@ function renderizarRevisao() {
   });
 }
 
-function adicionarMusicaImportada() {
+async function salvarMusicaImportadaNoAcervo() {
   const partesMontadas = [];
   let parteAtual = { nome: 'PARTE 1', linhas: [] };
   let i = 0;
@@ -1296,18 +1104,199 @@ function adicionarMusicaImportada() {
   if (parteAtual.linhas.length) partesMontadas.push(parteAtual);
   partesMontadas.forEach(p => { p.repeticao = '1x'; p.intensidade = 'Médio'; p.observacao = ''; });
 
-  criarBlocoMusica({ titulo: 'Música Importada', autores: '', instrumento: '', tom: 'C', partes: partesMontadas }, true);
-  observarMusicas();
+  const novaMusica = {
+    titulo: 'Música Importada', autores: '', instrumento: '', tom: 'C', bpm: '', compasso: '4/4', partes: partesMontadas, acao: 'salvarMusica', id: null
+  };
 
-  document.getElementById('texto-colado').value = '';
-  document.getElementById('nome-arquivo-pdf').textContent = '';
-  document.getElementById('lista-revisao').style.display = 'none';
-  document.getElementById('btn-confirmar-importacao').style.display = 'none';
-  linhasClassificadas = [];
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify(novaMusica) });
+    const res = await resp.json();
+    if (res.status === 'sucesso') {
+      mostrarAviso('Música importada e salva no acervo com sucesso!');
+      fecharModal('modal-importar');
+      document.getElementById('texto-colado').value = '';
+      document.getElementById('lista-revisao').style.display = 'none';
+      document.getElementById('btn-confirmar-importacao').style.display = 'none';
+      linhasClassificadas = [];
+      carregarBibliotecaCompleta();
+    } else {
+      mostrarAviso('Erro ao salvar no acervo.');
+    }
+  } catch (e) {
+    mostrarAviso('Erro de conexão com a nuvem.');
+  }
+}
 
-  fecharModal('modal-importar');
+// ==========================================
+// CONTROLES DE PARTES
+// ==========================================
+
+function moverParte(btn, direcao) {
+  const parte = btn.closest('.parte');
+  const bloco = parte.closest('.musica-bloco');
+  if (direcao === 'cima' && parte.previousElementSibling && parte.previousElementSibling.classList.contains('parte')) {
+    parte.parentElement.insertBefore(parte, parte.previousElementSibling);
+  } else if (direcao === 'baixo' && parte.nextElementSibling && parte.nextElementSibling.classList.contains('parte')) {
+    parte.parentElement.insertBefore(parte.nextElementSibling, parte);
+  }
+  renderizarMapaMusica(bloco);
+  salvarLocal();
+}
+
+function duplicarParte(btn) {
+  const parte = btn.closest('.parte');
+  const bloco = parte.closest('.musica-bloco');
+  const clone = parte.cloneNode(true);
+  clone.id = gerarId();
+  const nomeInput = clone.querySelector('.nome-parte');
+  nomeInput.value = nomeInput.value + ' (cópia)';
+  parte.after(clone);
+  clone.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  renderizarMapaMusica(bloco);
+  salvarLocal();
+}
+
+function removerParte(btn) {
+  const musica = btn.closest('.musica-bloco');
+  if (musica.querySelectorAll('.parte').length <= 1) {
+    mostrarAviso('A música precisa ter ao menos uma parte.');
+    return;
+  }
+  confirmarAcao('Esta parte será excluída.', () => {
+    btn.closest('.parte').remove();
+    renderizarMapaMusica(musica);
+    salvarLocal();
+  }, 'Excluir esta parte?');
+}
+
+let timeoutSalvar;
+document.addEventListener('input', (e) => {
+  if (e.target.id === 'busca-biblioteca-tab') { filtrarBibliotecaTab(e.target.value); return; }
+  if (e.target.id === 'busca-repertorios') { filtrarRepertorios(e.target.value); return; }
+  if (e.target.id === 'busca-modal-acervo') { filtrarModalAcervo(e.target.value); return; }
+  
+  clearTimeout(timeoutSalvar);
+  timeoutSalvar = setTimeout(() => {
+    salvarLocal();
+    if (e.target.classList.contains('musica-titulo')) renderizarIndice();
+    if (e.target.classList.contains('nome-parte') || e.target.classList.contains('campo-codigo-parte')) {
+      const bloco = e.target.closest('.musica-bloco');
+      if (bloco) renderizarMapaMusica(bloco);
+    }
+  }, 800);
+});
+
+document.addEventListener('keydown', function(e) {
+  const editavel = e.target.hasAttribute('contenteditable') && e.target.getAttribute('contenteditable') !== "false";
+  const ehLinhaDoGrupo = e.target.classList.contains('linha-cifra') || e.target.classList.contains('linha-letra') || e.target.classList.contains('linha-obs');
+
+  if (editavel && ehLinhaDoGrupo && e.key === 'Enter') {
+    e.preventDefault();
+    if (e.shiftKey) { document.execCommand('insertLineBreak'); return; }
+
+    const grupo = e.target.closest('.linha-grupo');
+    if (grupo) {
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = criarHtmlLinha({ cifra: '', letra: '', observacao: '' });
+      const novoGrupo = wrapper.firstElementChild;
+      grupo.after(novoGrupo);
+      const classeAlvo = e.target.classList.contains('linha-cifra') ? '.linha-cifra'
+        : e.target.classList.contains('linha-letra') ? '.linha-letra' : '.linha-obs';
+      novoGrupo.querySelector(classeAlvo).focus();
+      salvarLocal();
+    }
+  }
+});
+
+document.addEventListener('paste', function(e) {
+  if (e.target.hasAttribute('contenteditable')) {
+    e.preventDefault();
+    const textoPuro = (e.originalEvent || e).clipboardData.getData('text/plain');
+    document.execCommand('insertText', false, textoPuro);
+  }
+});
+
+function removerLinha(btn) {
+  btn.closest('.linha-grupo').remove();
+  salvarLocal();
+}
+
+function adicionarLinhaNaParte(btn) {
+  const parte = btn.closest('.parte');
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = criarHtmlLinha({ cifra: '', letra: '', observacao: '' });
+  const novoGrupo = wrapper.firstElementChild;
+  parte.insertBefore(novoGrupo, parte.querySelector('.botoes-rodape-parte'));
+  novoGrupo.querySelector('.linha-cifra').focus();
+  salvarLocal();
+}
+
+function removerMusica(btn) {
+  if (document.querySelectorAll('.musica-bloco').length <= 1) {
+    mostrarAviso('Mantenha pelo menos uma música no culto.');
+    return;
+  }
+  confirmarAcao('A música será removida deste repertório.', () => {
+    btn.closest('.musica-bloco').remove();
+    renderizarIndice();
+    salvarLocal();
+  }, 'Remover música do culto?');
+}
+
+function alternarModoVisualizacao() {
+  const modoVis = document.body.classList.toggle('modo-visualizacao');
+  const btn = document.getElementById('btn-bloqueio');
+  btn.innerHTML = modoVis ? '✏️ <span class="texto-btn">Editar</span>' : '🔒 <span class="texto-btn">Bloquear</span>';
+  document.querySelectorAll('[contenteditable]').forEach(el => el.setAttribute('contenteditable', !modoVis));
+  document.querySelectorAll('input').forEach(el => el.readOnly = modoVis);
+}
+
+const observador = new IntersectionObserver((entradas) => {
+  entradas.forEach(entrada => {
+    if (entrada.isIntersecting) { musicaAtualId = entrada.target.id; renderizarIndice(); }
+  });
+}, { rootMargin: '-100px 0px -60% 0px', threshold: 0 });
+
+function observarMusicas() {
+  observador.disconnect();
+  document.querySelectorAll('.musica-bloco').forEach(b => observador.observe(b));
+}
+
+function renderizarIndice() {
+  const lista = document.getElementById('indice-lista');
+  if (!lista) return;
+  lista.innerHTML = '';
+  const blocos = document.querySelectorAll('.musica-bloco');
+  blocos.forEach((bloco, i) => {
+    const titulo = bloco.querySelector('.musica-titulo').value || 'Sem título';
+    const item = document.createElement('div');
+    item.className = 'indice-item' + (bloco.id === musicaAtualId ? ' ativo' : '');
+    item.innerHTML = `
+      <span class="indice-num">${i + 1}</span>
+      <span class="indice-link" data-alvo="${bloco.id}">${escaparHtml(titulo)}</span>
+      <button class="indice-seta" data-mover="cima" data-id="${bloco.id}" ${i === 0 ? 'disabled style="visibility:hidden"' : ''}>▲</button>
+      <button class="indice-seta" data-mover="baixo" data-id="${bloco.id}" ${i === blocos.length - 1 ? 'disabled style="visibility:hidden"' : ''}>▼</button>
+    `;
+    lista.appendChild(item);
+  });
+  lista.querySelectorAll('.indice-link').forEach(el => {
+    el.addEventListener('click', () => document.getElementById(el.dataset.alvo).scrollIntoView({ behavior: 'smooth' }));
+  });
+  lista.querySelectorAll('.indice-seta').forEach(el => {
+    el.addEventListener('click', () => moverMusica(el.dataset.id, el.dataset.mover));
+  });
+}
+
+function moverMusica(id, direcao) {
+  const bloco = document.getElementById(id);
+  if (direcao === 'cima' && bloco.previousElementSibling && bloco.previousElementSibling.classList.contains('musica-bloco')) {
+    bloco.parentElement.insertBefore(bloco, bloco.previousElementSibling);
+  } else if (direcao === 'baixo' && bloco.nextElementSibling && bloco.nextElementSibling.classList.contains('musica-bloco')) {
+    bloco.parentElement.insertBefore(bloco.nextElementSibling, bloco);
+  }
   renderizarIndice();
   salvarLocal();
+  bloco.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function abrirModalImpressao() { document.getElementById('modal-impressao').classList.add('aberto'); }
@@ -1322,9 +1311,6 @@ window.addEventListener('afterprint', () => {
   document.querySelectorAll('.musica-bloco').forEach(b => b.classList.remove('nao-imprimir'));
 });
 
-// Preenche, em toda parte de toda música, uma linha discreta de identificação
-// (nome da música + tom) — assim qualquer folha impressa que se perca/embaralhe
-// no atril ainda mostra a que música ela pertence.
 window.addEventListener('beforeprint', () => {
   document.querySelectorAll('.musica-bloco').forEach(bloco => {
     const titulo = bloco.querySelector('.musica-titulo').value || 'Sem título';
