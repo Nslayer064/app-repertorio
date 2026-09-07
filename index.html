@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Repertório de Culto — Versão 2.0</title>
+<title>Repertório de Culto — Pro 3.0</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
   :root {
@@ -21,6 +21,7 @@
     --raio-card: 10px;
     --sombra-card: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
     --transicao: all 0.15s ease-in-out;
+    --tamanho-fonte: 0.9rem; /* Controlado pelo Zoom A-/A+ */
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -35,6 +36,24 @@
   }
   a { text-decoration: none; color: inherit; }
 
+  /* ===== Tela de Login Inicial ===== */
+  #tela-login {
+    position: fixed; inset: 0; background: var(--bg-app); z-index: 100;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .login-card {
+    background: var(--surface); border-radius: 12px; padding: 32px; max-width: 380px; width: 100%;
+    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); border: 1px solid var(--borda); text-align: center;
+  }
+  .login-card h2 { font-size: 1.35rem; font-weight: 700; margin-bottom: 8px; color: var(--primaria); }
+  .login-card p { font-size: 0.85rem; color: var(--texto-suave); margin-bottom: 24px; }
+  .btn-igreja {
+    width: 100%; padding: 12px; border: 1px solid var(--borda); border-radius: 8px; background: #f8fafc;
+    font-size: 0.95rem; font-weight: 600; cursor: pointer; margin-bottom: 10px; transition: var(--transicao); text-align: left;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .btn-igreja:hover { border-color: var(--primaria); background: #f0fdf4; color: var(--primaria); }
+
   /* ===== Topo / Header ===== */
   header.topo {
     position: sticky; top: 0; z-index: 30; background: var(--surface);
@@ -48,12 +67,15 @@
   .topo-titulos input.titulo-repertorio {
     font-size: 1.2rem; font-weight: 700; border: none; outline: none; background: transparent; color: var(--texto-principal); width: 100%;
   }
-  .topo-meta-linha { display: flex; align-items: center; gap: 10px; }
+  .topo-meta-linha { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .topo-meta-linha input[type="date"] {
     font-size: 0.8rem; color: var(--texto-suave); border: 1px solid var(--borda); border-radius: 4px; padding: 1px 6px; background: #fafafa; outline: none;
   }
   .topo-meta-linha input[type="text"] {
     font-size: 0.8rem; color: var(--texto-suave); border: none; outline: none; background: transparent; width: 140px;
+  }
+  .badge-igreja-logada {
+    font-size: 0.7rem; font-weight: 700; text-transform: uppercase; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 10px;
   }
 
   .topo-acoes { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
@@ -72,20 +94,21 @@
   .btn-bloqueio { background: #f3f4f6; color: var(--texto-suave); }
   body.modo-visualizacao .btn-bloqueio { background: #fef2f2; color: #b91c1c; border-color: #fca5a5; }
 
-  /* ===== Abas Principais (Navegação) ===== */
-  .barra-abas {
-    background: #e5e7eb; border-bottom: 1px solid #d1d5db; padding: 0 20px;
-  }
-  .abas-conteudo {
-    max-width: 900px; margin: 0 auto; display: flex; gap: 4px;
-  }
+  /* Controle de Zoom no Topo */
+  .controles-zoom { display: flex; align-items: center; gap: 2px; background: #f3f4f6; border-radius: 6px; padding: 2px; }
+  .btn-zoom { background: transparent; border: none; padding: 4px 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer; border-radius: 4px; color: var(--texto-suave); }
+  .btn-zoom:hover { background: #e5e7eb; color: var(--texto-principal); }
+
+  /* ===== Barra de Abas ===== */
+  .barra-abas { background: #e5e7eb; border-bottom: 1px solid #d1d5db; padding: 0 20px; }
+  .abas-conteudo { max-width: 900px; margin: 0 auto; display: flex; gap: 4px; }
   .aba-btn {
     padding: 10px 18px; font-size: 0.82rem; font-weight: 600; background: transparent;
     border: none; cursor: pointer; color: var(--texto-suave); border-bottom: 3px solid transparent;
   }
   .aba-btn.ativa { color: var(--primaria); background: var(--surface); border-bottom-color: var(--primaria); }
 
-  /* ===== Índice Sticky de Músicas ===== */
+  /* ===== Índice Sticky ===== */
   nav.indice {
     position: sticky; top: 61px; z-index: 20; background: rgba(255, 255, 255, 0.92);
     backdrop-filter: blur(6px); border-bottom: 1px solid var(--borda);
@@ -184,16 +207,25 @@
   .meta-campo-obs input { width: 100%; text-align: left; }
   .campo-codigo-parte { width: 36px !important; text-transform: uppercase; font-weight: 700; color: var(--primaria); }
 
-  /* ===== Linhas ===== */
+  /* ===== Linhas (Letra + Obs na mesma linha, Obs à direita) ===== */
   .linha-grupo { margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px dashed #f1f5f9; position: relative; }
   .linha-grupo:last-of-type { border-bottom: none; }
   .linha-cifra {
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-weight: 600; color: var(--cifra-cor); font-size: 0.9rem; line-height: 1.6;
+    font-weight: 600; color: var(--cifra-cor); font-size: var(--tamanho-fonte); line-height: 1.6;
     white-space: pre; overflow-x: auto; outline: none; min-height: 1.4em; padding: 1px 4px; border-radius: 4px;
   }
-  .linha-letra { font-size: 0.9rem; line-height: 1.5; outline: none; min-height: 1.4em; color: var(--texto-principal); padding: 1px 4px; border-radius: 4px; }
-  .linha-obs { font-size: 0.74rem; font-style: italic; line-height: 1.4; outline: none; min-height: 1.2em; color: var(--obs-cor); padding: 1px 4px; border-radius: 4px; }
+  .linha-conteudo-duplo {
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;
+  }
+  .linha-letra {
+    font-size: var(--tamanho-fonte); line-height: 1.5; outline: none; min-height: 1.4em;
+    color: var(--texto-principal); padding: 1px 4px; border-radius: 4px; flex: 1;
+  }
+  .linha-obs {
+    font-size: calc(var(--tamanho-fonte) * 0.85); font-style: italic; line-height: 1.4; outline: none;
+    min-height: 1.2em; color: var(--obs-cor); padding: 1px 4px; border-radius: 4px; text-align: right; max-width: 45%;
+  }
   .linha-obs:before { content: "🎸 " attr(data-placeholder); }
   .linha-obs:not(:empty):before { content: "🎸 "; }
   
@@ -211,13 +243,19 @@
   .btn-acao-micro:hover { color: var(--primaria); }
   .rodape-add { text-align: center; margin: 24px 0 12px; }
 
-  /* ===== Modo de Visualização ===== */
-  body.modo-visualizacao .btn-remover-musica, body.modo-visualizacao .musica-subacoes, body.modo-visualizacao .indice-seta, body.modo-visualizacao .topo-acoes button:not(.btn-bloqueio):not(.btn-sucesso), body.modo-visualizacao .btn-excluir-linha, body.modo-visualizacao .botoes-rodape-parte, body.modo-visualizacao .rodape-add, body.modo-visualizacao .btn-icone-limpo, body.modo-visualizacao .campo-instrumento, body.modo-visualizacao .controles-parte, body.modo-visualizacao .barra-abas { display: none !important; }
+  /* ===== Modo de Visualização (Inicia Bloqueado) ===== */
+  body.modo-visualizacao .btn-remover-musica, body.modo-visualizacao .musica-subacoes, body.modo-visualizacao .indice-seta, body.modo-visualizacao .topo-acoes button:not(.btn-bloqueio):not(.btn-sucesso), body.modo-visualizacao .btn-excluir-linha, body.modo-visualizacao .botoes-rodape-parte, body.modo-visualizacao .rodape-add, body.modo-visualizacao .btn-icone-limpo, body.modo-visualizacao .campo-instrumento, body.modo-visualizacao .controles-parte, body.modo-visualizacao .barra-abas, body.modo-visualizacao .vazio-botoes-acao { display: none !important; }
   body.modo-visualizacao input, body.modo-visualizacao [contenteditable] { pointer-events: none; border: none !important; background: transparent !important; }
   body.modo-visualizacao [contenteditable]:empty:before, body.modo-visualizacao .linha-cifra:empty, body.modo-visualizacao .linha-obs:empty { display: none !important; }
   body.modo-visualizacao .musica-cabecalho { border-left: 4px solid var(--primaria); }
 
-  /* ===== Modais e Listas ===== */
+  /* Estado Vazio (Tela inicial de novo repertório) */
+  .estado-vazio- repertorio { text-align: center; padding: 60px 20px; background: var(--surface); border-radius: var(--raio-card); border: 1px dashed var(--borda); margin-top: 20px; }
+  .estado-vazio h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 6px; }
+  .estado-vazio p { font-size: 0.85rem; color: var(--texto-suave); margin-bottom: 20px; }
+  .vazio-botoes-acao { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+  /* ===== Modais ===== */
   .modal-fundo { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.5); z-index: 50; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(2px); }
   .modal-fundo.aberto { display: flex; }
   .modal-caixa { background: var(--surface); border-radius: var(--raio-card); padding: 24px; max-width: 420px; width: 100%; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); max-height: 85vh; overflow-y: auto; }
@@ -261,7 +299,7 @@
   .toast-aviso.visivel { opacity: 1; transform: translateX(-50%) translateY(0); }
 
   @media print {
-    header.topo, nav.indice, .botoes-rodape-parte, .btn-excluir-linha, .btn-icone-limpo, .rodape-add, .modal-fundo, .campo-instrumento, .controles-parte, .toast-aviso, .barra-abas { display: none !important; }
+    header.topo, nav.indice, .botoes-rodape-parte, .btn-excluir-linha, .btn-icone-limpo, .rodape-add, .modal-fundo, .campo-instrumento, .controles-parte, .toast-aviso, .barra-abas, .controles-zoom { display: none !important; }
     body { background: white; padding: 0; color: black; font-size: 11pt; }
     .container { max-width: 100%; padding: 0; }
     .painel-view { display: block !important; }
@@ -291,31 +329,52 @@
   }
 </style>
 </head>
-<body>
+<body class="modo-visualizacao">
+
+<!-- TELA DE LOGIN INICIAL -->
+<div id="tela-login">
+  <div class="login-card">
+    <h2>Repertório de Culto</h2>
+    <p>Selecione quem está acessando:</p>
+    <button class="btn-igreja" onclick="fazerLogin('Igreja Central')">⛪ Igreja Central <span>➔</span></button>
+    <button class="btn-igreja" onclick="fazerLogin('Igreja Videira')">⛪ Igreja Videira <span>➔</span></button>
+    <div style="margin-top: 16px; border-top: 1px solid var(--borda); padding-top: 16px;">
+      <button class="btn" style="width: 100%; justify-content: center;" onclick="pedirSenhaAdmin()">🔐 Acesso Administrador</button>
+    </div>
+  </div>
+</div>
 
 <header class="topo">
   <div class="topo-conteudo">
     <div class="topo-titulos">
-      <input type="text" class="titulo-repertorio" id="repo-titulo" value="Repertório de Culto">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <input type="text" class="titulo-repertorio" id="repo-titulo" value="Culto de Domingo">
+        <span class="badge-igreja-logada" id="label-igreja-logada">Igreja</span>
+      </div>
       <div class="topo-meta-linha">
         <input type="date" id="repo-data" title="Data do Culto">
         <input type="text" id="repo-subtitulo" value="Noite · Culto Oficial" placeholder="Período / Descrição...">
       </div>
     </div>
     <div class="topo-acoes">
-      <button class="btn btn-sucesso" onclick="salvarRepertorioNuvem()" id="btn-salvar-nuvem">☁️ <span class="texto-btn">Salvar Repertório</span></button>
-      <button class="btn" onclick="abrirListaRepertorios()">🔄 <span class="texto-btn">Meus Repertórios</span></button>
+      <div class="controles-zoom" title="Tamanho da fonte">
+        <button class="btn-zoom" onclick="ajustarZoom(-1)">A-</button>
+        <button class="btn-zoom" onclick="ajustarZoom(1)">A+</button>
+      </div>
+      <button class="btn" onclick="novoRepertorio()">🗓️ <span class="texto-btn">Novo</span></button>
+      <button class="btn btn-sucesso" onclick="salvarRepertorioNuvem()" id="btn-salvar-nuvem">☁️ <span class="texto-btn">Salvar</span></button>
+      <button class="btn" onclick="abrirListaRepertorios()">🔄 <span class="texto-btn">Cultos</span></button>
       <button class="btn btn-primario" onclick="abrirModalImpressao()">📄 <span class="texto-btn">Imprimir</span></button>
       <button class="btn btn-bloqueio" id="btn-bloqueio" onclick="alternarModoVisualizacao()">🔒 <span class="texto-btn">Bloquear</span></button>
     </div>
   </div>
 </header>
 
-<!-- Barra de Abas (Separa Culto Atual do Acervo Geral) -->
+<!-- Barra de Abas -->
 <div class="barra-abas">
   <div class="abas-conteudo">
     <button class="aba-btn ativa" onclick="mudarAba('culto', this)">🎵 Culto Atual (Repertório)</button>
-    <button class="aba-btn" onclick="mudarAba('biblioteca', this)">📚 Acervo de Cifras (Biblioteca)</button>
+    <button class="aba-btn" onclick="mudarAba('biblioteca', this)">📚 Acervo Geral (Biblioteca)</button>
   </div>
 </div>
 
@@ -327,9 +386,12 @@
 
   <div class="container" id="lista-musicas"></div>
 
-  <div class="container">
+  <div class="container" id="bloco-rodape-acoes">
     <div class="rodape-add">
-      <button class="btn" style="width: 100%; justify-content: center; padding: 10px; border-style: dashed;" onclick="abrirBibliotecaParaAdicionar()">📚 Puxar músicas do Acervo</button>
+      <div class="vazio-botoes-acao" style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+        <button class="btn btn-primario" onclick="abrirBibliotecaParaAdicionar()">📚 Puxar músicas do Acervo</button>
+        <button class="btn" onclick="abrirModalImportar()">📥 Importar nova cifra</button>
+      </div>
     </div>
   </div>
 </div>
@@ -340,7 +402,7 @@
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
       <div>
         <h2 style="font-size: 1.2rem; font-weight: 700;">Acervo Geral de Cifras</h2>
-        <p style="font-size: 0.8rem; color: var(--texto-suave);">Importe e gerencie suas cifras aqui. Elas ficam salvas permanentemente para montar qualquer culto.</p>
+        <p style="font-size: 0.8rem; color: var(--texto-suave);">Base compartilhada entre as igrejas. Apenas o Administrador pode sobrescrever ou excluir cifras oficiais.</p>
       </div>
       <button class="btn btn-primario" onclick="abrirModalImportar()">📥 Importar Nova Cifra</button>
     </div>
@@ -366,11 +428,11 @@
   </div>
 </div>
 
-<!-- Modal Importação (Agora focada no Acervo) -->
+<!-- Modal Importação -->
 <div class="modal-fundo" id="modal-importar">
   <div class="modal-caixa larga">
     <h3>Importar Cifra para o Acervo</h3>
-    <p>Cole o texto pronto ou carregue um arquivo PDF. A música será salva diretamente no seu acervo geral.</p>
+    <p>Cole o texto pronto ou carregue um arquivo PDF. A música será salva diretamente no acervo geral.</p>
 
     <div class="abas-importar">
       <div class="aba-importar ativa" id="aba-texto" onclick="trocarAbaImportar('texto')">Colar Texto</div>
@@ -408,11 +470,11 @@
   </div>
 </div>
 
-<!-- Modal Escolher do Acervo (para montar o Culto) -->
+<!-- Modal Escolher do Acervo -->
 <div class="modal-fundo" id="modal-escolher-acervo">
   <div class="modal-caixa larga">
     <h3>Adicionar Músicas do Acervo</h3>
-    <p>Selecione uma ou mais músicas salvas no seu acervo para incluir no culto atual.</p>
+    <p>Selecione músicas salvas no acervo para incluir no culto atual.</p>
     <input type="text" class="input-busca" id="busca-modal-acervo" placeholder="Buscar no acervo...">
     <div class="lista-revisao lista-itens" style="border-top:none; margin-top:0; padding-top:0;">
       <div id="lista-escolher-acervo-itens"></div>
@@ -426,8 +488,8 @@
 <!-- Modal Meus Repertórios Salvos -->
 <div class="modal-fundo" id="modal-repertorios">
   <div class="modal-caixa larga">
-    <h3>Repertórios Salvos</h3>
-    <p>Selecione um culto anterior salvo na planilha para carregar.</p>
+    <h3>Cultos Salvos</h3>
+    <p>Repertórios recentes da sua igreja:</p>
     <input type="text" class="input-busca" id="busca-repertorios" placeholder="Buscar por título ou data...">
     <div class="lista-revisao lista-itens" style="border-top:none; margin-top:0; padding-top:0;">
       <div id="lista-repertorios-itens"></div>
@@ -438,7 +500,7 @@
   </div>
 </div>
 
-<!-- Modal de Confirmação genérico -->
+<!-- Modal de Confirmação -->
 <div class="modal-fundo" id="modal-confirmacao">
   <div class="modal-caixa">
     <h3 id="confirmacao-titulo">Confirmar ação</h3>
@@ -455,10 +517,13 @@
 <script>
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyPaH0JpR8FYD0N-ZxK57f_clTpkmcS7x3YA1TAXANPg6V4wQC4-DWg-2DWKQ9GJ8L8/exec";
 
+let igrejaLogada = null;
+let isAdmin = false;
 let musicaAtualId = null;
 let repertorioAtualId = null;
 let bibliotecaCache = [];
 let repertoriosCache = [];
+let tamanhoFonteAtual = 0.9;
 
 function mostrarAviso(texto) {
   const toast = document.getElementById('toast-aviso');
@@ -488,6 +553,53 @@ function escaparHtml(texto) {
 
 function gerarId() { return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).substr(2, 9); }
 
+function ajustarZoom(delta) {
+  tamanhoFonteAtual = Math.max(0.75, Math.min(1.3, tamanhoFonteAtual + (delta * 0.05)));
+  document.documentElement.style.setProperty('--tamanho-fonte', tamanhoFonteAtual + 'rem');
+  mostrarAviso('Zoom: ' + Math.round(tamanhoFonteAtual * 100) + '%');
+}
+
+// ==========================================
+// LOGIN E CONTROLE DE IGREJAS
+// ==========================================
+
+function fazerLogin(igreja) {
+  igrejaLogada = igreja;
+  isAdmin = false;
+  document.getElementById('label-igreja-logada').textContent = igreja;
+  document.getElementById('tela-login').style.display = 'none';
+  localStorage.setItem('draftProIgreja', igreja);
+  localStorage.setItem('draftProAdmin', 'false');
+  carregarLocalOuIniciar();
+}
+
+function pedirSenhaAdmin() {
+  const senha = prompt('Digite a senha de Administrador:');
+  if (senha === 'culto123') { // Defina sua senha aqui
+    igrejaLogada = 'Administração';
+    isAdmin = true;
+    document.getElementById('label-igreja-logada').textContent = 'ADMIN';
+    document.getElementById('tela-login').style.display = 'none';
+    localStorage.setItem('draftProIgreja', 'Administração');
+    localStorage.setItem('draftProAdmin', 'true');
+    carregarLocalOuIniciar();
+  } else if (senha !== null) {
+    alert('Senha incorreta.');
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  const salva = localStorage.getItem('draftProIgreja');
+  const admSalvo = localStorage.getItem('draftProAdmin') === 'true';
+  if (salva) {
+    igrejaLogada = salva;
+    isAdmin = admSalvo;
+    document.getElementById('label-igreja-logada').textContent = salva;
+    document.getElementById('tela-login').style.display = 'none';
+    carregarLocalOuIniciar();
+  }
+});
+
 function mudarAba(aba, btn) {
   document.querySelectorAll('.aba-btn').forEach(b => b.classList.remove('ativa'));
   btn.classList.add('ativa');
@@ -496,42 +608,68 @@ function mudarAba(aba, btn) {
   if (aba === 'biblioteca') carregarBibliotecaCompleta();
 }
 
-// ==========================================
-// RASCUNHO LOCAL E DATA DO CULTO
-// ==========================================
-
 function obterDataHojeFormatada() {
-  const hoje = new Date();
-  return hoje.toISOString().split('T')[0];
+  return new Date().toISOString().split('T')[0];
 }
+
+// ==========================================
+// RASCUNHO LOCAL E NOVO REPERTÓRIO
+// ==========================================
 
 function salvarLocal() {
   const dados = {
     id: repertorioAtualId,
+    igreja: igrejaLogada,
     titulo: document.getElementById('repo-titulo').value,
     data: document.getElementById('repo-data').value,
     subtitulo: document.getElementById('repo-subtitulo').value,
     html: document.getElementById('lista-musicas').innerHTML
   };
-  localStorage.setItem('repertorioDraftPro2', JSON.stringify(dados));
+  localStorage.setItem('repertorioDraftPro3', JSON.stringify(dados));
 }
 
-function carregarLocal() {
-  const salvo = localStorage.getItem('repertorioDraftPro2');
+function carregarLocalOuIniciar() {
+  const salvo = localStorage.getItem('repertorioDraftPro3');
   if (salvo) {
     const dados = JSON.parse(salvo);
     repertorioAtualId = dados.id || null;
-    document.getElementById('repo-titulo').value = dados.titulo || 'Repertório de Culto';
+    document.getElementById('repo-titulo').value = dados.titulo || 'Culto de Domingo';
     document.getElementById('repo-data').value = dados.data || obterDataHojeFormatada();
     document.getElementById('repo-subtitulo').value = dados.subtitulo || '';
     document.getElementById('lista-musicas').innerHTML = dados.html || '';
-    if (!document.querySelector('.musica-bloco')) adicionarMusicaVazia(true);
+    if (!document.querySelector('.musica-bloco')) mostrarEstadoVazioRepertorio();
   } else {
     document.getElementById('repo-data').value = obterDataHojeFormatada();
-    adicionarMusicaVazia(true);
+    mostrarEstadoVazioRepertorio();
   }
   observarMusicas();
   renderizarIndice();
+}
+
+function mostrarEstadoVazioRepertorio() {
+  repertorioAtualId = null;
+  document.getElementById('lista-musicas').innerHTML = `
+    <div class="estado-vazio-repertorio" id="estado-vazio">
+      <h3>Nenhuma música neste repertório</h3>
+      <p>Comece puxando músicas do acervo geral ou importando uma nova cifra.</p>
+      <div class="vazio-botoes-acao">
+        <button class="btn btn-primario" onclick="abrirBibliotecaParaAdicionar()">📚 Puxar do Acervo</button>
+        <button class="btn" onclick="abrirModalImportar()">📥 Importar Cifra</button>
+      </div>
+    </div>`;
+  renderizarIndice();
+  salvarLocal();
+}
+
+function novoRepertorio() {
+  confirmarAcao('Iniciar um novo repertório em branco na tela?', () => {
+    repertorioAtualId = null;
+    document.getElementById('repo-titulo').value = 'Culto de Domingo';
+    document.getElementById('repo-data').value = obterDataHojeFormatada();
+    document.getElementById('repo-subtitulo').value = '';
+    mostrarEstadoVazioRepertorio();
+    mostrarAviso('Novo repertório iniciado.');
+  }, 'Criar Novo Repertório');
 }
 
 // ==========================================
@@ -543,8 +681,10 @@ function criarHtmlLinha(l) {
   return `
     <div class="linha-grupo">
       <div class="linha-cifra" contenteditable="true" spellcheck="false" data-placeholder="Acordes...">${escaparHtml(l.cifra)}</div>
-      <div class="linha-letra" contenteditable="true" data-placeholder="Letra...">${escaparHtml(l.letra)}</div>
-      <div class="linha-obs" contenteditable="true" data-placeholder="Instrumento/observação desta linha (opcional)">${escaparHtml(l.observacao)}</div>
+      <div class="linha-conteudo-duplo">
+        <div class="linha-letra" contenteditable="true" data-placeholder="Letra...">${escaparHtml(l.letra)}</div>
+        <div class="linha-obs" contenteditable="true" data-placeholder="Instrumento/obs...">${escaparHtml(l.observacao)}</div>
+      </div>
       <button class="btn-excluir-linha" onclick="removerLinha(this)">✕</button>
     </div>`;
 }
@@ -582,6 +722,9 @@ function criarHtmlParte(p) {
 }
 
 function criarBlocoMusica(m, focar) {
+  const vazio = document.getElementById('estado-vazio');
+  if (vazio) vazio.remove();
+
   const id = gerarId();
   const partesFonte = (m.partes && m.partes.length) ? m.partes : [{ nome: 'VERSO 1', codigo: '', repeticao: '1x', intensidade: 'Médio', observacao: '', linhas: [{ cifra: '', letra: '', observacao: '' }] }];
   const partesHtml = partesFonte.map(criarHtmlParte).join('');
@@ -595,7 +738,7 @@ function criarBlocoMusica(m, focar) {
       <div class="musica-info-principal">
         <div class="musica-titulo-linha">
           <input type="text" class="musica-titulo" value="${escaparHtml(m.titulo || 'Nova Música')}">
-          <button class="btn-icone-limpo" onclick="salvarMusicaNoAcervoDireto(this)" title="Atualizar ou salvar no acervo geral">📚</button>
+          ${isAdmin ? `<button class="btn-icone-limpo" onclick="salvarMusicaNoAcervoDireto(this)" title="Atualizar no acervo geral (Admin)">📚</button>` : ''}
           <button class="btn-icone-limpo" onclick="removerMusica(this)" title="Remover do culto">🗑️</button>
         </div>
         <div class="musica-meta">
@@ -667,16 +810,6 @@ document.addEventListener('click', (e) => {
   }
 });
 
-function adicionarMusicaVazia(isInit = false) {
-  criarBlocoMusica({
-    titulo: 'Nova Música', autores: '', instrumento: '', tom: 'G', bpm: '', compasso: '4/4',
-    partes: [{ nome: 'VERSO 1', codigo: '', repeticao: '1x', intensidade: 'Médio', observacao: '', linhas: [{ cifra: '', letra: '', observacao: '' }] }]
-  }, !isInit);
-  observarMusicas();
-  renderizarIndice();
-  if (!isInit) salvarLocal();
-}
-
 function adicionarParteNaMusica(btn) {
   const bloco = btn.closest('.musica-bloco');
   const wrapper = document.createElement('div');
@@ -689,7 +822,7 @@ function adicionarParteNaMusica(btn) {
 }
 
 // ==========================================
-// EXTRAÇÃO DE DADOS ESTRUTURADOS
+// EXTRAÇÃO DE DADOS
 // ==========================================
 
 function extrairDadosMusica(bloco) {
@@ -738,6 +871,7 @@ function extrairDadosMusica(bloco) {
 function extrairDadosRepertorio() {
   return {
     id: repertorioAtualId,
+    igreja: igrejaLogada,
     titulo: document.getElementById('repo-titulo').value,
     data: document.getElementById('repo-data').value,
     subtitulo: document.getElementById('repo-subtitulo').value,
@@ -781,22 +915,22 @@ async function abrirListaRepertorios() {
   document.getElementById('modal-repertorios').classList.add('aberto');
   document.getElementById('busca-repertorios').value = '';
   const container = document.getElementById('lista-repertorios-itens');
-  container.innerHTML = '<p class="item-vazio">Carregando repertórios...</p>';
+  container.innerHTML = '<p class="item-vazio">Carregando cultos...</p>';
   try {
-    const resp = await fetch(APPS_SCRIPT_URL + '?acao=listarRepertorios&_=' + Date.now(), { cache: 'no-store' });
+    const resp = await fetch(APPS_SCRIPT_URL + '?acao=listarRepertorios&igreja=' + encodeURIComponent(igrejaLogada) + '&_=' + Date.now(), { cache: 'no-store' });
     const dados = await resp.json();
     repertoriosCache = dados.repertorios || [];
     renderizarListaRepertorios(repertoriosCache);
   } catch (e) {
     console.error(e);
-    container.innerHTML = '<p class="item-erro">Erro ao carregar lista de repertórios.</p>';
+    container.innerHTML = '<p class="item-erro">Erro ao carregar lista de cultos.</p>';
   }
 }
 
 function renderizarListaRepertorios(lista) {
   const container = document.getElementById('lista-repertorios-itens');
   if (!lista.length) {
-    container.innerHTML = '<p class="item-vazio">Nenhum repertório salvo na nuvem.</p>';
+    container.innerHTML = '<p class="item-vazio">Nenhum culto recente encontrado.</p>';
     return;
   }
   container.innerHTML = lista.map(r => `
@@ -825,7 +959,7 @@ async function carregarRepertorioDaNuvem(id) {
     const r = await resp.json();
     if (r.status !== 'sucesso') { mostrarAviso('Repertório não encontrado.'); return; }
 
-    document.getElementById('repo-titulo').value = r.titulo || 'Repertório de Culto';
+    document.getElementById('repo-titulo').value = r.titulo || 'Culto de Domingo';
     document.getElementById('repo-data').value = r.data || obterDataHojeFormatada();
     document.getElementById('repo-subtitulo').value = r.subtitulo || '';
     repertorioAtualId = r.id;
@@ -840,13 +974,12 @@ async function carregarRepertorioDaNuvem(id) {
     salvarLocal();
     mostrarAviso('Repertório carregado com sucesso!');
   } catch (e) {
-    console.error(e);
     mostrarAviso('Erro ao carregar repertório.');
   }
 }
 
 function confirmarExcluirRepertorio(id) {
-  confirmarAcao('O repertório será apagado permanentemente da planilha.', async () => {
+  confirmarAcao('O repertório será apagado permanentemente.', async () => {
     try {
       const resp = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'excluirRepertorio', id }) });
       const res = await resp.json();
@@ -869,7 +1002,6 @@ async function carregarBibliotecaCompleta() {
     bibliotecaCache = dados.musicas || [];
     renderizarBibliotecaCompleta(bibliotecaCache);
   } catch (e) {
-    console.error(e);
     container.innerHTML = '<p class="item-erro">Erro ao carregar acervo da nuvem.</p>';
   }
 }
@@ -877,7 +1009,7 @@ async function carregarBibliotecaCompleta() {
 function renderizarBibliotecaCompleta(lista) {
   const container = document.getElementById('lista-biblioteca-completa');
   if (!lista.length) {
-    container.innerHTML = '<p class="item-vazio">Nenhuma música no acervo. Clique em "Importar Nova Cifra" para começar.</p>';
+    container.innerHTML = '<p class="item-vazio">Nenhuma música no acervo.</p>';
     return;
   }
   container.innerHTML = lista.map(m => `
@@ -887,7 +1019,7 @@ function renderizarBibliotecaCompleta(lista) {
         <span style="color:var(--texto-suave);"> — ${escaparHtml(m.autores || 'Sem autor')} (Tom ${escaparHtml(m.tom || '-')})</span>
       </span>
       <div class="grupo-acoes">
-        <button class="btn btn-mini-excluir" onclick="confirmarExcluirMusicaAcervo('${m.id}')" title="Excluir do acervo">🗑️</button>
+        ${isAdmin ? `<button class="btn btn-mini-excluir" onclick="confirmarExcluirMusicaAcervo('${m.id}')" title="Excluir do acervo">🗑️</button>` : ''}
         <button class="btn btn-primario btn-mini" onclick="adicionarMusicaAcervoNoCulto('${m.id}')">＋ Incluir no Culto</button>
       </div>
     </div>`).join('');
@@ -953,6 +1085,7 @@ async function adicionarMusicaAcervoNoCulto(id) {
 }
 
 async function salvarMusicaNoAcervoDireto(btn) {
+  if (!isAdmin) { mostrarAviso('Apenas o Administrador pode alterar o acervo geral.'); return; }
   const bloco = btn.closest('.musica-bloco');
   const dados = extrairDadosMusica(bloco);
   dados.acao = 'salvarMusica';
@@ -965,7 +1098,7 @@ async function salvarMusicaNoAcervoDireto(btn) {
     const res = await resp.json();
     if (res.status === 'sucesso') {
       bloco.dataset.bibliotecaId = res.id;
-      mostrarAviso('Música atualizada/salva no acervo geral!');
+      mostrarAviso('Música atualizada no acervo geral!');
     } else {
       mostrarAviso('Erro ao salvar no acervo.');
     }
@@ -977,6 +1110,7 @@ async function salvarMusicaNoAcervoDireto(btn) {
 }
 
 function confirmarExcluirMusicaAcervo(id) {
+  if (!isAdmin) return;
   confirmarAcao('A música será removida do acervo geral.', async () => {
     try {
       const resp = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'excluirMusica', id }) });
@@ -988,12 +1122,32 @@ function confirmarExcluirMusicaAcervo(id) {
 }
 
 // ==========================================
-// IMPORTAÇÃO PARA O ACERVO
+// IMPORTAÇÃO PARA O ACERVO (Com Reset Completo)
 // ==========================================
 
 let linhasClassificadas = [];
-function abrirModalImportar() { document.getElementById('modal-importar').classList.add('aberto'); }
-function fecharModal(id) { document.getElementById(id).classList.remove('aberto'); }
+function abrirModalImportar() {
+  document.getElementById('texto-colado').value = '';
+  document.getElementById('arquivo-pdf').value = '';
+  document.getElementById('nome-arquivo-pdf').textContent = '';
+  document.getElementById('lista-revisao').style.display = 'none';
+  document.getElementById('btn-confirmar-importacao').style.display = 'none';
+  linhasClassificadas = [];
+  document.getElementById('modal-importar').classList.add('aberto');
+}
+
+function fecharModal(id) {
+  document.getElementById(id).classList.remove('aberto');
+  if (id === 'modal-importar') {
+    document.getElementById('texto-colado').value = '';
+    document.getElementById('arquivo-pdf').value = '';
+    document.getElementById('nome-arquivo-pdf').textContent = '';
+    document.getElementById('lista-revisao').style.display = 'none';
+    document.getElementById('btn-confirmar-importacao').style.display = 'none';
+    linhasClassificadas = [];
+  }
+}
+
 function trocarAbaImportar(aba) {
   document.getElementById('aba-texto').classList.toggle('ativa', aba === 'texto');
   document.getElementById('aba-pdf').classList.toggle('ativa', aba === 'pdf');
@@ -1114,10 +1268,6 @@ async function salvarMusicaImportadaNoAcervo() {
     if (res.status === 'sucesso') {
       mostrarAviso('Música importada e salva no acervo com sucesso!');
       fecharModal('modal-importar');
-      document.getElementById('texto-colado').value = '';
-      document.getElementById('lista-revisao').style.display = 'none';
-      document.getElementById('btn-confirmar-importacao').style.display = 'none';
-      linhasClassificadas = [];
       carregarBibliotecaCompleta();
     } else {
       mostrarAviso('Erro ao salvar no acervo.');
@@ -1232,13 +1382,11 @@ function adicionarLinhaNaParte(btn) {
 }
 
 function removerMusica(btn) {
-  if (document.querySelectorAll('.musica-bloco').length <= 1) {
-    mostrarAviso('Mantenha pelo menos uma música no culto.');
-    return;
-  }
+  const musica = btn.closest('.musica-bloco');
   confirmarAcao('A música será removida deste repertório.', () => {
-    btn.closest('.musica-bloco').remove();
-    renderizarIndice();
+    musica.remove();
+    if (!document.querySelector('.musica-bloco')) mostrarEstadoVazioRepertorio();
+    else renderizarIndice();
     salvarLocal();
   }, 'Remover música do culto?');
 }
@@ -1320,8 +1468,6 @@ window.addEventListener('beforeprint', () => {
     });
   });
 });
-
-window.onload = carregarLocal;
 </script>
 </body>
 </html>
