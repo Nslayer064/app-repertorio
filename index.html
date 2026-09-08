@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DraftPro — Pro 4.0 (Completo)</title>
+<link rel="manifest" href="manifest.json">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
   :root {
@@ -228,6 +229,28 @@
     .musica-titulo { font-size: 1.2rem; }
     .meta-campo-obs { width: 100%; }
     .form-linha { grid-template-columns: 1fr; gap: 8px; }
+  }
+
+  @media print {
+    header, nav, .hub-header, .hub-abas, .btn, .btn-icone-limpo, .admin-only, .botoes-rodape-parte, .rodape-add, .modal-fundo, .toast-aviso, .controles-zoom { display: none !important; }
+    body { background: white; padding: 0; color: black; font-size: 11pt; }
+    .container { max-width: 100%; padding: 0; }
+    .tela { display: block !important; padding-bottom: 0 !important; }
+    #tela-login, #tela-hub { display: none !important; }
+    .musica-bloco { break-before: page; margin-bottom: 20px; }
+    .musica-cabecalho { box-shadow: none; border: none; border-bottom: 2px solid #000; padding: 8px 0; margin-bottom: 12px; }
+    .parte { box-shadow: none; border: none; padding: 0; margin-bottom: 12px; break-inside: avoid; }
+    .cab-parte { border-bottom: 1px solid #ddd; padding-bottom: 4px; margin-bottom: 6px; }
+    .tom-badge { border: 1px solid #000; background: transparent; }
+    .tom-valor, .bpm-valor, .compasso-valor { color: black; }
+    .linha-cifra { color: #000; font-weight: bold; overflow: visible; white-space: pre; }
+    .linha-obs { color: #333; }
+    .linha-letra:empty, .linha-obs:empty { display: none !important; }
+    [contenteditable]:empty:before { display: none !important; }
+    .mapa-musica { margin: 0 0 10px; }
+    .chip-mapa { background: none; border: none; color: #000; padding: 0; font-size: 9pt; cursor: default; }
+    .chip-mapa:not(:last-child):after { content: " → "; color: #888; font-weight: 400; }
+    .contexto-impressao { display: block !important; font-size: 7.5pt; text-transform: uppercase; letter-spacing: 0.05em; color: #777; margin-bottom: 4px; }
   }
 </style>
 </head>
@@ -1287,6 +1310,17 @@ async function salvarImportacaoNoAcervo() {
     } else { mostrarAviso('Erro ao salvar no acervo.'); }
   } catch (e) { mostrarAviso('Erro de conexão com a nuvem.'); } 
   finally { btn.innerHTML = 'Salvar no Acervo'; btn.disabled = false; }
+}
+
+// ==========================================
+// REGISTRO DO SERVICE WORKER (PWA)
+// ==========================================
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => console.log('PWA: Service Worker registrado com sucesso!', reg.scope))
+      .catch(err => console.error('PWA: Erro ao registrar Service Worker:', err));
+  });
 }
 </script>
 </body>
