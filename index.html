@@ -336,6 +336,7 @@
           <button class="btn-zoom" onclick="ajustarZoom(1)">A+</button>
         </div>
         <button class="btn btn-sucesso admin-only" onclick="salvarRepertorioNuvem()" id="btn-salvar-nuvem">☁️ <span class="texto-btn">Salvar</span></button>
+        <button class="btn btn-primario" onclick="imprimirCulto()">📄 <span class="texto-btn">Imprimir</span></button>
         <button class="btn btn-bloqueio" id="btn-bloqueio" onclick="alternarModoVisualizacao()">🔒 <span class="texto-btn">Travado</span></button>
       </div>
     </div>
@@ -673,7 +674,7 @@ function criarHtmlLinha(l) {
         <div class="linha-letra" contenteditable="true" data-placeholder="Letra...">${escaparHtml(l.letra)}</div>
         <div class="linha-obs" contenteditable="true" data-placeholder="Instrumento/obs...">${escaparHtml(l.observacao)}</div>
       </div>
-      <button class="btn-excluir-linha admin-only" onclick="removerLinha(this)">✕</button>
+      <button class="btn-excluir-linha" onclick="removerLinha(this)">✕</button>
     </div>`;
 }
 
@@ -986,6 +987,27 @@ function moverMusica(id, direcao) {
   salvarLocal();
   bloco.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
+
+// ==========================================
+// MOTOR DE IMPRESSÃO
+// ==========================================
+function imprimirCulto() {
+  document.querySelectorAll('.tela').forEach(t => t.style.display = 'none');
+  document.getElementById('tela-palco').style.display = 'block';
+  window.print();
+  document.querySelectorAll('.tela').forEach(t => t.style.display = '');
+}
+
+window.addEventListener('beforeprint', () => {
+  document.querySelectorAll('.musica-bloco').forEach(bloco => {
+    const titulo = bloco.querySelector('.musica-titulo').value || 'Sem título';
+    const tomInput = bloco.querySelector('.tom-valor');
+    const tom = tomInput ? tomInput.value : '';
+    bloco.querySelectorAll('.contexto-impressao').forEach(el => {
+      el.textContent = titulo + ' · Tom ' + tom;
+    });
+  });
+});
 
 // ==========================================
 // SALVAR CULTO E EXTRAÇÃO DE DADOS (Seu Código)
