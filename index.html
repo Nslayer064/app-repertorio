@@ -1175,17 +1175,13 @@ function confirmarExcluirMusicaAcervo(id) {
 }
 
 // ==========================================
-// IMPORTAÇÃO NOVA (Editável e Interativa)
+// IMPORTAÇÃO NOVA (Modo Livre para Palco)
 // ==========================================
 function abrirModalImportar() {
-  document.getElementById('etapa-1-import').style.display = 'block';
-  document.getElementById('etapa-2-import').style.display = 'none';
   document.getElementById('import-texto-bruto').value = '';
-  document.getElementById('import-titulo').value = '';
-  document.getElementById('import-autor').value = '';
-  document.getElementById('import-tom').value = '';
   document.getElementById('import-pdf').value = '';
   document.getElementById('nome-arquivo-pdf').textContent = '';
+  trocarAbaImportar('texto');
   document.getElementById('modal-importar').classList.add('aberto');
 }
 
