@@ -363,66 +363,38 @@
 <!-- ========================================== -->
 
 <!-- Modal Importação (Nova versão Interativa) -->
+<!-- Modal Importação (Modo Livre - Envio para o Palco) -->
 <div class="modal-fundo" id="modal-importar">
   <div class="modal-caixa larga">
     <h3>Importar Nova Cifra</h3>
+    <p style="font-size:0.85rem; color:var(--texto-suave); margin-bottom:16px;">Cole a música inteira ou suba um PDF. A estruturação de estrofes e refrões será feita manualmente por você direto no Palco.</p>
     
-    <div id="etapa-1-import">
-      <p style="font-size:0.85rem; color:var(--texto-suave); margin-bottom:16px;">Cole o texto estruturado ou suba um PDF.</p>
-      
-      <div class="abas-importar">
-        <div class="aba-importar ativa" id="aba-texto" onclick="trocarAbaImportar('texto')">Colar Texto</div>
-        <div class="aba-importar" id="aba-pdf" onclick="trocarAbaImportar('pdf')">Arquivo PDF</div>
-      </div>
+    <div class="abas-importar">
+      <div class="aba-importar ativa" id="aba-texto" onclick="trocarAbaImportar('texto')">Colar Texto</div>
+      <div class="aba-importar" id="aba-pdf" onclick="trocarAbaImportar('pdf')">Arquivo PDF</div>
+    </div>
 
-      <div class="painel-importar ativo" id="painel-texto">
-        <textarea class="area-colar" id="import-texto-bruto" placeholder="Cole a cifra aqui..."></textarea>
-        <div class="modal-botoes" style="justify-content: flex-start; margin-top: 8px;">
-          <button class="btn btn-primario" onclick="processarTextoBruto()">Avançar para Revisão ➔</button>
-        </div>
-      </div>
-
-      <div class="painel-importar" id="painel-pdf">
-        <label class="input-pdf" for="import-pdf">
-          📄 Clique para selecionar o PDF<br>
-          <span id="nome-arquivo-pdf" style="font-size: 0.75rem; color: var(--texto-suave);"></span>
-        </label>
-        <input type="file" id="import-pdf" accept="application/pdf" style="display:none" onchange="extrairPDF(this)">
-      </div>
-      
-      <div style="text-align:right; margin-top:16px; border-top:1px solid var(--borda); padding-top:16px;">
-        <button class="btn" onclick="fecharModal('modal-importar')">Cancelar</button>
+    <div class="painel-importar ativo" id="painel-texto">
+      <textarea class="area-colar" id="import-texto-bruto" placeholder="Cole a cifra bruta aqui..." style="height: 250px;"></textarea>
+      <div class="modal-botoes" style="justify-content: flex-start; margin-top: 8px;">
+        <button class="btn btn-primario" onclick="processarTextoBruto()">➔ Enviar para o Palco</button>
       </div>
     </div>
 
-    <!-- Etapa 2: Revisão Interativa -->
-    <div id="etapa-2-import" style="display:none;">
-      <div class="form-linha">
-        <div class="form-campo">
-          <label>Título da Música</label>
-          <input type="text" id="import-titulo" placeholder="Ex: Grandioso És Tu">
-        </div>
-        <div class="form-campo">
-          <label>Autor / Banda</label>
-          <input type="text" id="import-autor" placeholder="Opcional">
-        </div>
-        <div class="form-campo">
-          <label>Tom</label>
-          <input type="text" id="import-tom" placeholder="Ex: G" maxlength="3">
-        </div>
-      </div>
-      
-      <p style="font-size:0.8rem; font-weight:700; margin-bottom:8px; color:var(--primaria);">Revisão (Corrija as linhas, se necessário):</p>
-      <div class="area-revisao" id="import-revisao-linhas"></div>
-
-      <div style="display:flex; justify-content:flex-end; gap:8px;">
-        <button class="btn" onclick="voltarEtapaImportacao()">← Voltar</button>
-        <button class="btn btn-sucesso" id="btn-finalizar-import" onclick="salvarImportacaoNoAcervo()">Salvar no Acervo</button>
-      </div>
+    <div class="painel-importar" id="painel-pdf">
+      <label class="input-pdf" for="import-pdf">
+        📄 Clique para selecionar o PDF<br>
+        <span id="nome-arquivo-pdf" style="font-size: 0.75rem; color: var(--texto-suave);"></span>
+      </label>
+      <input type="file" id="import-pdf" accept="application/pdf" style="display:none" onchange="extrairPDF(this)">
+    </div>
+    
+    <div style="text-align:right; margin-top:16px; border-top:1px solid var(--borda); padding-top:16px;">
+      <button class="btn" onclick="fecharModal('modal-importar')">Cancelar</button>
     </div>
   </div>
 </div>
-
+  
 <!-- Modal Escolher do Acervo -->
 <div class="modal-fundo" id="modal-escolher-acervo">
   <div class="modal-caixa larga">
@@ -674,7 +646,8 @@ function criarHtmlLinha(l) {
         <div class="linha-letra" contenteditable="true" data-placeholder="Letra...">${escaparHtml(l.letra)}</div>
         <div class="linha-obs" contenteditable="true" data-placeholder="Instrumento/obs...">${escaparHtml(l.observacao)}</div>
       </div>
-      <button class="btn-excluir-linha" onclick="removerLinha(this)">✕</button>
+      <button class="btn-excluir-linha admin-only" style="right: 25px;" onclick="quebrarParteAqui(this)" title="✂️ Separar em nova parte a partir daqui">✂️</button>
+      <button class="btn-excluir-linha admin-only" onclick="removerLinha(this)" title="Excluir linha">✕</button>
     </div>`;
 }
 
@@ -1082,7 +1055,7 @@ async function salvarRepertorioNuvem() {
 }
 
 async function carregarRepertorioDaNuvem(id) {
-  mostrarAviso("Carregando culto...");
+  mostrarAviso("⏳ Carregando culto...");
   try {
     const resp = await fetch(APPS_SCRIPT_URL + '?acao=carregarRepertorio&id=' + encodeURIComponent(id) + '&_=' + Date.now(), { cache: 'no-store' });
     const r = await resp.json();
@@ -1095,17 +1068,25 @@ async function carregarRepertorioDaNuvem(id) {
 
     const container = document.getElementById('lista-musicas');
     container.innerHTML = '';
-    r.musicas.forEach(m => criarBlocoMusica(m, false));
+    
+    const musicasSeguras = Array.isArray(r.musicas) ? r.musicas : [];
+    if (musicasSeguras.length === 0) mostrarEstadoVazioRepertorio();
+    else musicasSeguras.forEach(m => criarBlocoMusica(m, false));
 
     observarMusicas();
     renderizarIndice();
     salvarLocal();
     mudarTela('tela-palco');
-    if (!document.body.classList.contains('modo-visualizacao')) alternarModoVisualizacao(); // Abre sempre bloqueado
-    mostrarAviso('Culto carregado e travado para leitura!');
-  } catch (e) { mostrarAviso('Erro ao carregar culto.'); }
+    
+    // Força bloqueio/desbloqueio para resetar botões de edição visualmente
+    if (document.body.classList.contains('modo-visualizacao')) alternarModoVisualizacao();
+    alternarModoVisualizacao(); 
+    mostrarAviso('✔️ Culto carregado e pronto!');
+  } catch (e) { 
+    console.error(e);
+    mostrarAviso('❌ Erro. A estrutura deste culto pode estar corrompida.'); 
+  }
 }
-
 function confirmarExcluirRepertorio(id) {
   confirmarAcao('O culto será apagado permanentemente da sua igreja.', async () => {
     try {
@@ -1214,11 +1195,10 @@ function trocarAbaImportar(aba) {
   document.getElementById('painel-texto').classList.toggle('ativo', aba === 'texto');
   document.getElementById('painel-pdf').classList.toggle('ativo', aba === 'pdf');
 }
-
 function processarTextoBruto() {
-  const txt = document.getElementById('import-texto-bruto').value.trim();
-  if(!txt) { mostrarAviso("Cole o texto primeiro!"); return; }
-  gerarTelaRevisao(txt);
+  const txt = document.getElementById('import-texto-bruto').value;
+  if(!txt.trim()) { mostrarAviso("Cole o texto primeiro!"); return; }
+  gerarMusicaNoPalco(txt);
 }
 
 async function extrairPDF(input) {
@@ -1241,97 +1221,82 @@ async function extrairPDF(input) {
       const ys = Object.keys(linhasPorY).sort((a, b) => b - a);
       ys.forEach(y => { textoCompleto += linhasPorY[y].join(' ') + '\n'; });
     }
-    document.getElementById('nome-arquivo-pdf').textContent = arquivo.name + ' — extraído!';
-    gerarTelaRevisao(textoCompleto);
+    gerarMusicaNoPalco(textoCompleto);
   } catch (e) { document.getElementById('nome-arquivo-pdf').textContent = 'Erro ao ler PDF.'; }
 }
 
-function gerarTelaRevisao(texto) {
-  const linhas = texto.split('\n').filter(l => l.trim() !== '');
-  const container = document.getElementById('import-revisao-linhas');
+function gerarMusicaNoPalco(textoBruto) {
+  const linhas = textoBruto.split('\n');
+  let linhasMontadas = [];
   
-  container.innerHTML = linhas.map((l) => {
-    const t = l.trim();
-    // Tenta classificar automaticamente
-    const ehCifra = /^[A-G](#|b)?m?(7|9|11|13|sus4|dim)?(\/[A-G](#|b)?)?(\s+[A-G](#|b)?m?(7|9|11|13|sus4|dim)?(\/[A-G](#|b)?)?)*$/.test(t);
-    const ehParte = /^(intro|verso|refr[ãa]o|ponte|coro|final|\[.*\])/i.test(t);
-    let tipo = ehCifra ? 'cifra' : (ehParte ? 'parte' : 'letra');
-    
-    return `
-      <div class="linha-editavel">
-        <select>
-          <option value="cifra" ${tipo==='cifra'?'selected':''}>Cifra</option>
-          <option value="letra" ${tipo==='letra'?'selected':''}>Letra</option>
-          <option value="parte" ${tipo==='parte'?'selected':''}>Parte</option>
-          <option value="ignorar">Ignorar</option>
-        </select>
-        <input type="text" value="${escaparHtml(t)}">
-      </div>`;
-  }).join('');
-  
-  document.getElementById('etapa-1-import').style.display = 'none';
-  document.getElementById('etapa-2-import').style.display = 'block';
-}
-
-function voltarEtapaImportacao() {
-  document.getElementById('etapa-1-import').style.display = 'block';
-  document.getElementById('etapa-2-import').style.display = 'none';
-}
-
-async function salvarImportacaoNoAcervo() {
-  const btn = document.getElementById('btn-finalizar-import');
-  btn.innerHTML = '⏳ Salvando...'; btn.disabled = true;
-
-  const linhasRevisao = document.querySelectorAll('.linha-editavel');
-  let partes = [];
-  let parteAtual = { nome: 'INÍCIO', linhas: [] };
-  let linhaCifraPendente = '';
-
-  linhasRevisao.forEach(div => {
-    const tipo = div.querySelector('select').value;
-    const txt = div.querySelector('input').value;
-    
-    if (tipo === 'ignorar' || !txt) return;
-    
-    if (tipo === 'parte') {
-      if (parteAtual.linhas.length > 0 || linhaCifraPendente) {
-        if (linhaCifraPendente) parteAtual.linhas.push({ cifra: linhaCifraPendente, letra: '', observacao: '' });
-        partes.push(parteAtual);
-      }
-      parteAtual = { nome: txt.replace(/[\[\]]/g, '').trim().toUpperCase(), linhas: [] };
-      linhaCifraPendente = '';
-    } else if (tipo === 'cifra') {
-      if (linhaCifraPendente) parteAtual.linhas.push({ cifra: linhaCifraPendente, letra: '', observacao: '' });
-      linhaCifraPendente = txt;
-    } else if (tipo === 'letra') {
-      parteAtual.linhas.push({ cifra: linhaCifraPendente, letra: txt, observacao: '' });
-      linhaCifraPendente = '';
-    }
+  // Transforma todas as linhas brutas em "Letras" (mantendo espaçamento inicial para os acordes)
+  linhas.forEach(linha => {
+    const t = linha.trimEnd(); 
+    if (t) linhasMontadas.push({ cifra: '', letra: t, observacao: '' });
   });
-  if (linhaCifraPendente) parteAtual.linhas.push({ cifra: linhaCifraPendente, letra: '', observacao: '' });
-  if (parteAtual.linhas.length > 0) partes.push(parteAtual);
-  
-  partes.forEach(p => { p.repeticao = '1x'; p.intensidade = 'Médio'; p.observacao = ''; });
 
-  const payload = {
-    acao: 'salvarMusica',
-    titulo: document.getElementById('import-titulo').value || 'Música Sem Título',
-    autores: document.getElementById('import-autor').value,
-    tom: document.getElementById('import-tom').value,
-    instrumento: '', bpm: '', compasso: '4/4',
-    partes: partes
+  if(linhasMontadas.length === 0) linhasMontadas = [{ cifra: '', letra: '', observacao: '' }];
+
+  const novaMusica = {
+    titulo: "Nova Música Importada", autores: "", tom: "C", instrumento: "", bpm: "", compasso: "4/4",
+    partes: [{
+      nome: "MÚSICA COMPLETA", codigo: "IN", repeticao: "1x", intensidade: "Médio", observacao: "",
+      linhas: linhasMontadas
+    }]
   };
 
-  try {
-    const resp = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) });
-    const res = await resp.json();
-    if (res.status === 'sucesso') {
-      mostrarAviso('Música importada e salva no acervo!');
-      fecharModal('modal-importar');
-      carregarDadosHub();
-    } else { mostrarAviso('Erro ao salvar no acervo.'); }
-  } catch (e) { mostrarAviso('Erro de conexão com a nuvem.'); } 
-  finally { btn.innerHTML = 'Salvar no Acervo'; btn.disabled = false; }
+  // Se não houver culto aberto, inicia um automaticamente
+  if(!repertorioAtualId && !document.querySelector('.musica-bloco')) { novoRepertorio(); }
+
+  criarBlocoMusica(novaMusica, true);
+  observarMusicas();
+  renderizarIndice();
+  salvarLocal();
+  
+  fecharModal('modal-importar');
+  mudarTela('tela-palco');
+  
+  // Destrava o modo visualização para permitir corte manual imediatamente
+  if (document.body.classList.contains('modo-visualizacao')) alternarModoVisualizacao();
+  
+  mostrarAviso("Música gerada! Passe o mouse e use o botão '✂️' para dividir as partes.");
+}
+
+function quebrarParteAqui(btn) {
+  const linhaAtual = btn.closest('.linha-grupo');
+  const parteAtual = btn.closest('.parte');
+  const musicaBloco = btn.closest('.musica-bloco');
+  
+  if (!linhaAtual || !parteAtual || !musicaBloco) return;
+
+  const todasLinhas = Array.from(parteAtual.querySelectorAll('.linha-grupo'));
+  const indiceCorte = todasLinhas.indexOf(linhaAtual);
+  
+  if (indiceCorte === 0) {
+    mostrarAviso("Esta já é a primeira linha desta parte."); return;
+  }
+
+  // Captura todas as linhas daqui para baixo
+  const linhasParaMover = todasLinhas.slice(indiceCorte);
+  
+  // Cria bloco de nova parte
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = criarHtmlParte({ 
+    nome: 'NOVA PARTE', codigo: '', repeticao: '1x', intensidade: 'Médio', observacao: '', linhas: [] 
+  });
+  const novaParte = wrapper.firstElementChild;
+  
+  // Limpa a linha vazia que vem de fábrica e joga as linhas recortadas dentro
+  novaParte.querySelectorAll('.linha-grupo').forEach(l => l.remove());
+  const rodapeNovaParte = novaParte.querySelector('.botoes-rodape-parte');
+  linhasParaMover.forEach(linha => novaParte.insertBefore(linha, rodapeNovaParte));
+  
+  // Adiciona a parte após a atual
+  parteAtual.after(novaParte);
+  
+  renderizarMapaMusica(musicaBloco);
+  salvarLocal();
+  novaParte.querySelector('.nome-parte').focus();
 }
 
 // ==========================================
