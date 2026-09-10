@@ -362,7 +362,6 @@
 <!-- MODAIS -->
 <!-- ========================================== -->
 
-<!-- Modal Importação (Nova versão Interativa) -->
 <!-- Modal Importação (Modo Livre - Envio para o Palco) -->
 <div class="modal-fundo" id="modal-importar">
   <div class="modal-caixa larga">
@@ -1087,6 +1086,7 @@ async function carregarRepertorioDaNuvem(id) {
     mostrarAviso('❌ Erro. A estrutura deste culto pode estar corrompida.'); 
   }
 }
+
 function confirmarExcluirRepertorio(id) {
   confirmarAcao('O culto será apagado permanentemente da sua igreja.', async () => {
     try {
@@ -1191,6 +1191,7 @@ function trocarAbaImportar(aba) {
   document.getElementById('painel-texto').classList.toggle('ativo', aba === 'texto');
   document.getElementById('painel-pdf').classList.toggle('ativo', aba === 'pdf');
 }
+
 function processarTextoBruto() {
   const txt = document.getElementById('import-texto-bruto').value;
   if(!txt.trim()) { mostrarAviso("Cole o texto primeiro!"); return; }
