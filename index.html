@@ -4,374 +4,843 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#155487">
-<title>DraftPro — Protótipo Escalável</title>
+<title>DraftPro — Premium & Escalável</title>
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
-/* =========================================
-   1. DESIGN SYSTEM & VARIÁVEIS (LIGHT / DARK)
-   ========================================= */
-:root {
-  --brand: #155487;
-  --brand-2: #1c679f;
-  --brand-soft: #eaf3f9;
-  --green: #18a957;
-  --green-soft: #eaf8f0;
-  --bg: #f5f7f9;
-  --surface: #ffffff;
-  --surface-2: #f0f3f6;
-  --text: #172131;
-  --muted: #66717f;
-  --line: #dfe5ea;
-  --warning: #d98a00;
-  --danger: #d84c4c;
-  --shadow: 0 4px 12px rgba(23,33,49,.05);
-  --chord-color: #a8662e;
-  --radius: 16px;
-}
-
-/* Tema Escuro (Ativado via classe no body) */
-body.dark-theme {
-  --brand: #60a5fa;
-  --brand-2: #3b82f6;
-  --brand-soft: #1e3a8a;
-  --green: #22c55e;
-  --green-soft: #064e3b;
-  --bg: #0f172a;
-  --surface: #1e293b;
-  --surface-2: #334155;
-  --text: #f8fafc;
-  --muted: #94a3b8;
-  --line: #334155;
-  --shadow: 0 8px 24px rgba(0,0,0,.4);
-  --chord-color: #facc15; /* Amarelo alto contraste */
-}
-
-* { box-sizing: border-box; }
-html, body {
-  margin: 0; padding: 0; 
-  background: var(--bg); color: var(--text); 
-  font-family: Inter, system-ui, -apple-system, sans-serif;
-  transition: background-color 0.3s, color 0.3s;
-}
-button, input { font: inherit; outline: none; }
-button { cursor: pointer; }
-
-/* =========================================
-   2. ARQUITETURA DE LAYOUT (MOBILE FIRST)
-   ========================================= */
-.app-container {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-}
-
-.main-content {
-  flex: 1;
-  padding-bottom: 90px; /* Espaço para a bottom nav mobile */
-  width: 100%;
-}
-
-.content-wrapper {
-  width: 100%;
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-.screen { display: none; padding: 20px; animation: fadeIn 0.3s ease; }
-.screen.active { display: block; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-
-/* =========================================
-   3. COMPONENTES VISUAIS
-   ========================================= */
-.topbar {
-  height: 64px; background: var(--surface); display: flex; align-items: center;
-  justify-content: space-between; padding: 0 20px; border-bottom: 1px solid var(--line);
-  position: sticky; top: 0; z-index: 20;
-}
-.brand { display: flex; align-items: center; gap: 10px; }
-.brand-mark {
-  width: 32px; height: 32px; border-radius: 8px; background: var(--brand);
-  color: #fff; display: grid; place-items: center; font-weight: 900;
-}
-.brand-name { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
-
-h1 { font-size: 26px; line-height: 1.2; margin: 0 0 4px; letter-spacing: -0.5px; }
-h2 { font-size: 18px; margin: 0; }
-.sub { color: var(--muted); font-size: 14px; margin: 0 0 24px 0; }
-.section-head { display: flex; justify-content: space-between; align-items: end; margin: 32px 0 16px; }
-
-/* Botões */
-.primary-btn {
-  border: 0; background: var(--green); color: #fff; border-radius: 12px; 
-  padding: 14px 20px; font-weight: 700; width: 100%; text-align: center;
-  transition: opacity 0.2s;
-}
-.primary-btn:active { opacity: 0.8; }
-.icon-btn {
-  width: 40px; height: 40px; border: 1px solid var(--line); background: transparent; 
-  border-radius: 10px; color: var(--text); display: grid; place-items: center;
-}
-
-/* Cards (Grid Automático) */
-.grid-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 12px;
-}
-.list-grid-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 12px;
-}
-
-.quick-card {
-  background: var(--surface); border: 1px solid var(--line); border-radius: 14px; 
-  padding: 16px; text-align: left; box-shadow: var(--shadow);
-}
-.quick-card strong { display: block; margin-top: 8px; font-size: 14px; color: var(--text); }
-.quick-card span { font-size: 12px; color: var(--muted); }
-
-.item-card {
-  background: var(--surface); border: 1px solid var(--line); border-radius: 14px; 
-  padding: 16px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 12px;
-}
-.card-top { display: flex; justify-content: space-between; align-items: flex-start; }
-.card-title { font-size: 16px; font-weight: 700; color: var(--text); }
-.card-meta { color: var(--muted); font-size: 13px; margin-top: 4px; }
-.badge { background: var(--surface-2); color: var(--muted); border-radius: 6px; padding: 4px 8px; font-size: 11px; font-weight: 700; }
-.badge.ready { background: var(--green-soft); color: var(--green); }
-
-/* =========================================
-   4. TELA DE EXECUÇÃO (OTIMIZAÇÃO PALCO)
-   ========================================= */
-.structure-wrap {
-  display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 16px;
-  /* Oculta scrollbar */
-  -ms-overflow-style: none; scrollbar-width: none;
-}
-.structure-wrap::-webkit-scrollbar { display: none; }
-
-.seg {
-  flex: 0 0 auto; border: 1px solid var(--line); background: var(--surface); 
-  color: var(--text); border-radius: 8px; font-weight: 700;
-  /* ERGONOMIA CRÍTICA: Alvos de toque maiores (44px) */
-  min-width: 48px; min-height: 48px; padding: 0 16px; font-size: 13px;
-  display: grid; place-items: center;
-}
-.seg.active { background: var(--brand); color: #fff; border-color: var(--brand); }
-
-.chords-box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
-.chord-line { color: var(--chord-color); font-size: 18px; font-weight: 700; font-family: monospace; margin-bottom: 4px; }
-.lyric-line { font-size: 16px; line-height: 1.5; color: var(--text); margin-bottom: 16px; }
-
-/* =========================================
-   5. NAVEGAÇÃO (BOTTOM MOBILE / SIDEBAR DESKTOP)
-   ========================================= */
-.nav-bar {
-  position: fixed; bottom: 0; left: 0; width: 100%; height: 70px;
-  background: var(--surface); border-top: 1px solid var(--line);
-  display: flex; justify-content: space-around; align-items: center;
-  z-index: 30; padding-bottom: env(safe-area-inset-bottom);
-}
-.nav-btn {
-  background: none; border: 0; color: var(--muted); display: flex; 
-  flex-direction: column; align-items: center; gap: 4px; font-size: 11px; font-weight: 600;
-  padding: 8px 16px; border-radius: 8px;
-}
-.nav-btn.active { color: var(--brand); }
-
-/* Switch Toggle */
-.switch { position: relative; width: 44px; height: 24px; background: var(--line); border-radius: 12px; cursor: pointer; transition: 0.3s; }
-.switch.on { background: var(--green); }
-.switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; background: #fff; border-radius: 50%; transition: 0.3s; }
-.switch.on::after { transform: translateX(20px); }
-
-/* =========================================
-   6. RESPONSIVIDADE (TABLET & DESKTOP)
-   ========================================= */
-@media (min-width: 768px) {
-  .app-container { flex-direction: row; height: 100vh; overflow: hidden; }
-  
-  .nav-bar {
-    position: relative; width: 220px; height: 100vh; border-top: none; 
-    border-right: 1px solid var(--line); flex-direction: column; 
-    justify-content: flex-start; padding: 24px 16px; gap: 12px;
+  :root {
+    --brand: #155487;
+    --brand-2: #1c679f;
+    --brand-soft: #eaf3f9;
+    --green: #18a957;
+    --green-soft: #eaf8f0;
+    --bg: #f5f7f9;
+    --surface: #ffffff;
+    --surface-2: #f0f3f6;
+    --text: #172131;
+    --muted: #66717f;
+    --line: #dfe5ea;
+    --warning: #d98a00;
+    --danger: #d84c4c;
+    --shadow: 0 4px 12px rgba(23,33,49,.05);
+    --chord-color: #a8662e;
+    --obs-cor: #15803d;
+    --radius: 16px;
+    --tamanho-fonte: 0.95rem;
   }
-  .nav-btn { flex-direction: row; width: 100%; padding: 12px 16px; font-size: 14px; gap: 12px; }
-  .nav-btn.active { background: var(--brand-soft); color: var(--brand); }
+
+  body.dark-theme {
+    --brand: #60a5fa;
+    --brand-2: #3b82f6;
+    --brand-soft: #1e3a8a;
+    --green: #22c55e;
+    --green-soft: #064e3b;
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --surface-2: #334155;
+    --text: #f8fafc;
+    --muted: #94a3b8;
+    --line: #334155;
+    --shadow: 0 8px 24px rgba(0,0,0,.4);
+    --chord-color: #facc15;
+    --obs-cor: #4ade80;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    line-height: 1.5; -webkit-font-smoothing: antialiased;
+    transition: background-color 0.3s, color 0.3s;
+  }
+  button, input { font: inherit; outline: none; }
+  button { cursor: pointer; }
+  a { text-decoration: none; color: inherit; }
+
+  /* Layout Base */
+  .app-container { display: flex; flex-direction: column; min-height: 100vh; }
+  .main-content { flex: 1; padding-bottom: 90px; width: 100%; }
+  .content-wrapper { width: 100%; max-width: 900px; margin: 0 auto; padding: 20px 16px; }
   
-  .main-content { padding-bottom: 0; overflow-y: auto; }
-  .content-wrapper { padding: 32px; max-width: 900px; }
-  .screen { padding: 0; }
-}
+  .tela { display: none; opacity: 0; transition: opacity 0.2s ease; }
+  .tela.ativa { display: block; opacity: 1; }
+
+  /* Tela de Login */
+  #tela-login { background: var(--bg); align-items: center; justify-content: center; padding: 20px; position: fixed; inset: 0; z-index: 100; }
+  #tela-login.ativa { display: flex; }
+  .login-card { background: var(--surface); border-radius: 12px; padding: 32px; max-width: 380px; width: 100%; box-shadow: var(--shadow); border: 1px solid var(--line); text-align: center; }
+  .login-card h2 { font-size: 1.5rem; font-weight: 800; margin-bottom: 8px; color: var(--brand); letter-spacing: -0.5px; }
+  .login-card p { font-size: 0.85rem; color: var(--muted); margin-bottom: 24px; }
+  .btn-igreja { width: 100%; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); font-size: 0.95rem; font-weight: 600; cursor: pointer; margin-bottom: 10px; transition: 0.2s; text-align: left; display: flex; align-items: center; justify-content: space-between; color: var(--text); }
+  .btn-igreja:hover { border-color: var(--brand); background: var(--brand-soft); color: var(--brand); }
+
+  /* Componentes Gerais */
+  .btn { padding: 10px 16px; border: 1px solid var(--line); border-radius: 12px; font-size: 0.85rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; background: var(--surface); color: var(--text); transition: 0.2s; }
+  .btn:hover { background: var(--surface-2); opacity: 0.9; }
+  .btn-primario { background: var(--brand); color: white; border: none; }
+  .btn-primario:hover { background: var(--brand-2); transform: translateY(-1px); box-shadow: var(--shadow); }
+  .btn-sucesso { background: var(--green); color: white; border: none; }
+  .btn-sucesso:hover { opacity: 0.9; transform: translateY(-1px); }
+
+  /* Topbar e Navegação */
+  .topbar { height: 64px; background: var(--surface); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 20; }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand-mark { width: 32px; height: 32px; border-radius: 8px; background: var(--brand); color: #fff; display: grid; place-items: center; font-weight: 900; }
+  .brand-name { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
+  
+  .nav-bar { position: fixed; bottom: 0; left: 0; width: 100%; height: 70px; background: var(--surface); border-top: 1px solid var(--line); display: flex; justify-content: space-around; align-items: center; z-index: 30; padding-bottom: env(safe-area-inset-bottom); }
+  .nav-btn { background: none; border: 0; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; padding: 8px 16px; border-radius: 8px; }
+  .nav-btn.active { color: var(--brand); }
+
+  /* Hub / Listas */
+  .secao-titulo { font-size: 1.1rem; font-weight: 700; margin: 24px 0 12px; color: var(--text); border-bottom: 2px solid var(--line); padding-bottom: 8px; }
+  .lista-cards { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .card-item, .quick-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s; box-shadow: var(--shadow); }
+  .card-item:hover, .quick-card:hover { border-color: var(--brand); transform: translateY(-2px); }
+  .card-info h4 { font-size: 1.05rem; font-weight: 700; margin-bottom: 4px; color: var(--text); }
+  .card-info p { font-size: 0.8rem; color: var(--muted); }
+  .badge { background: var(--surface-2); color: var(--muted); border-radius: 6px; padding: 4px 8px; font-size: 11px; font-weight: 700; }
+  .badge.ready { background: var(--green-soft); color: var(--green); }
+
+  /* Tela Palco / Execução */
+  header.topo { position: sticky; top: 64px; z-index: 25; background: var(--surface); border-bottom: 1px solid var(--line); box-shadow: var(--shadow); }
+  .topo-conteudo { max-width: 900px; margin: 0 auto; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+  .topo-esquerda { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 260px; }
+  .btn-voltar { background: transparent; border: none; font-size: 1.2rem; cursor: pointer; color: var(--muted); padding: 4px; border-radius: 4px; }
+  .btn-voltar:hover { background: var(--surface-2); color: var(--text); }
+  .topo-titulos { display: flex; flex-direction: column; gap: 2px; width: 100%; }
+  .topo-titulos input.titulo-repertorio { font-size: 1.25rem; font-weight: 800; border: none; outline: none; background: transparent; color: var(--brand); width: 100%; letter-spacing: -0.5px; }
+  .topo-meta-linha { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .topo-meta-linha input[type="date"] { font-size: 0.8rem; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; background: var(--surface-2); outline: none; }
+  .topo-meta-linha input[type="text"] { font-size: 0.8rem; color: var(--muted); border: none; outline: none; background: transparent; width: 140px; }
+  
+  .topo-acoes { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .controles-zoom { display: flex; align-items: center; gap: 2px; background: var(--surface-2); border-radius: 6px; padding: 2px; border: 1px solid var(--line); }
+  .btn-zoom { background: transparent; border: none; padding: 4px 10px; font-size: 0.8rem; font-weight: 700; cursor: pointer; border-radius: 4px; color: var(--muted); }
+  .btn-zoom:hover { background: var(--surface); color: var(--text); }
+
+  /* Índice / Mapa de Palco */
+  nav.indice { position: sticky; top: 130px; z-index: 20; background: var(--surface); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line); }
+  .indice-lista { max-width: 900px; margin: 0 auto; padding: 6px 16px; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+  .indice-lista::-webkit-scrollbar { display: none; }
+  .indice-item { display: flex; align-items: center; gap: 4px; background: var(--bg); border: 1px solid var(--line); border-radius: 16px; padding: 3px 6px 3px 10px; flex-shrink: 0; transition: 0.2s; }
+  .indice-item.ativo { background: var(--brand); border-color: var(--brand); }
+  .indice-item.ativo .indice-link, .indice-item.ativo .indice-num { color: white; }
+  .indice-num { font-size: 0.68rem; color: var(--muted); font-weight: 600; }
+  .indice-link { font-size: 0.78rem; font-weight: 500; cursor: pointer; white-space: nowrap; color: var(--text); }
+  .indice-seta { border: none; background: transparent; color: var(--muted); cursor: pointer; font-size: 0.7rem; padding: 2px 4px; border-radius: 4px; }
+
+  /* Blocos de Cifra */
+  .musica-bloco { scroll-margin-top: 180px; margin-bottom: 32px; }
+  .musica-cabecalho { background: var(--surface); border-radius: var(--radius); padding: 18px 20px; margin-bottom: 12px; box-shadow: var(--shadow); border: 1px solid var(--line); display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+  .musica-info-principal { flex: 1; min-width: 0; }
+  .musica-titulo-linha { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .musica-titulo { font-size: 1.35rem; font-weight: 800; border: none; outline: none; background: transparent; color: var(--text); width: 100%; }
+  .musica-meta { font-size: 0.8rem; color: var(--muted); display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+  .musica-meta-linha { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
+  .musica-meta input { border: none; outline: none; background: transparent; font-size: inherit; color: inherit; }
+
+  .campo-instrumento { background: var(--green-soft); border: 1px solid var(--green); border-radius: 6px; padding: 4px 8px; font-size: 0.78rem; color: var(--green); display: flex; align-items: center; gap: 6px; width: 100%; margin-top: 4px; }
+  .campo-instrumento input { border: none; outline: none; background: transparent; font-size: inherit; color: inherit; width: 100%; font-weight: 500; }
+
+  .badges-musica { display: flex; gap: 6px; flex-wrap: wrap; flex-shrink: 0; }
+  .tom-badge { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px; min-width: 44px; }
+  .tom-rotulo { font-size: 0.6rem; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .tom-valor, .bpm-valor, .compasso-valor { font-size: 0.95rem; font-weight: 800; color: var(--brand); border: none; background: transparent; text-align: center; width: 32px; outline: none; }
+  .bpm-valor { width: 34px; } .compasso-valor { width: 38px; }
+
+  .mapa-musica { display: flex; gap: 5px; flex-wrap: wrap; margin: -4px 0 14px; }
+  .chip-mapa { background: var(--brand-soft); border: 1px solid var(--line); color: var(--brand); font-size: 0.72rem; font-weight: 700; padding: 3px 9px; border-radius: 12px; cursor: pointer; }
+  .chip-mapa:hover { background: var(--brand); color: white; border-color: var(--brand); }
+
+  .parte { background: var(--surface); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 10px; box-shadow: var(--shadow); border: 1px solid var(--line); position: relative; }
+  .cab-parte { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+  .cab-parte-esq { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .nome-parte { font-size: 0.85rem; font-weight: 700; text-transform: uppercase; border: none; outline: none; background: transparent; color: var(--brand); }
+  
+  .controles-parte { display: flex; gap: 2px; align-items: center; background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px; padding: 1px; }
+  .btn-ctrl-parte { background: transparent; border: none; font-size: 0.7rem; color: var(--muted); cursor: pointer; padding: 2px 5px; border-radius: 3px; }
+  .btn-ctrl-parte:hover { background: var(--line); color: var(--text); }
+
+  .meta-parte { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .meta-campo { display: flex; align-items: center; gap: 4px; font-size: 0.75rem; color: var(--muted); }
+  .meta-campo input { width: 45px; border: 1px solid var(--line); border-radius: 4px; padding: 2px 4px; font-size: 0.75rem; text-align: center; outline: none; background: var(--surface-2); }
+  .meta-campo-obs { flex: 1; min-width: 140px; }
+  .meta-campo-obs input { width: 100%; text-align: left; }
+  .campo-codigo-parte { width: 36px !important; text-transform: uppercase; font-weight: 700; color: var(--brand); }
+
+  .linha-grupo { margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px dashed var(--line); position: relative; }
+  .linha-grupo:last-of-type { border-bottom: none; }
+  .linha-cifra { font-family: monospace; font-weight: 600; color: var(--chord-color); font-size: var(--tamanho-fonte); line-height: 1.6; white-space: pre; overflow-x: auto; outline: none; min-height: 1.4em; padding: 1px 4px; }
+  .linha-conteudo-duplo { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+  .linha-letra { font-size: var(--tamanho-fonte); line-height: 1.5; outline: none; min-height: 1.4em; color: var(--text); flex: 1; }
+  .linha-obs { font-size: calc(var(--tamanho-fonte) * 0.85); font-style: italic; line-height: 1.4; outline: none; min-height: 1.2em; color: var(--obs-cor); text-align: right; max-width: 45%; }
+  
+  [contenteditable]:empty:before { content: attr(data-placeholder); color: var(--muted); font-weight: 400; pointer-events: none; display: block; }
+  .btn-excluir-linha { position: absolute; right: 0; top: 2px; background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.7rem; opacity: 0; transition: opacity 0.15s; padding: 4px; }
+  .linha-grupo:hover .btn-excluir-linha { opacity: 1; }
+  .btn-excluir-linha:hover { color: var(--danger) !important; }
+
+  /* Modais e Componentes UI */
+  .modal-fundo { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.6); z-index: 50; align-items: flex-start; justify-content: center; padding: 40px 20px; overflow-y: auto; backdrop-filter: blur(4px); }
+  .modal-fundo.aberto { display: flex; }
+  .modal-caixa { background: var(--surface); border-radius: var(--radius); padding: 24px; max-width: 420px; width: 100%; box-shadow: var(--shadow); border: 1px solid var(--line); position: relative; }
+  .modal-caixa.larga { max-width: 700px; }
+  .modal-caixa h3 { font-size: 1.25rem; margin-bottom: 6px; font-weight: 800; color: var(--brand); }
+  .modal-botoes { display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end; }
+  
+  .abas-importar { display: flex; gap: 6px; margin-bottom: 16px; }
+  .aba-importar { flex: 1; text-align: center; padding: 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-size: 0.82rem; font-weight: 500; }
+  .aba-importar.ativa { background: var(--brand); color: white; border-color: var(--brand); }
+  .painel-importar { display: none; }
+  .painel-importar.ativo { display: block; }
+  .area-colar { width: 100%; height: 180px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); border-radius: 8px; padding: 12px; font-family: monospace; font-size: 0.85rem; margin-bottom: 16px; resize: vertical; outline: none; }
+  .input-pdf { width: 100%; padding: 24px; border: 2px dashed var(--line); border-radius: 6px; text-align: center; font-size: 0.85rem; color: var(--muted); cursor: pointer; display: block; margin-bottom: 16px; }
+
+  .switch { position: relative; width: 44px; height: 24px; background: var(--line); border-radius: 12px; cursor: pointer; transition: 0.3s; }
+  .switch.on { background: var(--green); }
+  .switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; background: #fff; border-radius: 50%; transition: 0.3s; }
+  .switch.on::after { transform: translateX(20px); }
+
+  .toast-aviso { position: fixed; bottom: 85px; left: 50%; transform: translateX(-50%) translateY(20px); background: #111827; color: white; padding: 12px 20px; border-radius: 30px; font-size: 0.85rem; font-weight: 600; box-shadow: var(--shadow); opacity: 0; pointer-events: none; transition: all 0.2s ease; z-index: 200; }
+  .toast-aviso.visivel { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* Responsividade Desktop Side-Nav */
+  @media (min-width: 768px) {
+    .app-container { flex-direction: row; height: 100vh; overflow: hidden; }
+    .nav-bar { position: relative; width: 220px; height: 100vh; border-top: none; border-right: 1px solid var(--line); flex-direction: column; justify-content: flex-start; padding: 24px 16px; gap: 12px; }
+    .nav-btn { flex-direction: row; width: 100%; padding: 12px 16px; font-size: 14px; gap: 12px; }
+    .nav-btn.active { background: var(--brand-soft); color: var(--brand); }
+    .main-content { padding-bottom: 0; overflow-y: auto; }
+    .topbar { display: none; } /* Oculta topbar comum em desktop em prol da barra lateral, mantendo estrutura unificada */
+  }
+
+  @media print {
+    .topbar, .nav-bar, .indice, .btn, .admin-only, .botoes-rodape-parte, .rodape-add, .modal-fundo, .toast-aviso, .controles-zoom { display: none !important; }
+    body { background: white; color: black; }
+    .app-container, .main-content { display: block; overflow: visible; }
+    .content-wrapper { max-width: 100%; padding: 0; }
+    .tela { display: block !important; opacity: 1 !important; }
+    #tela-login, #tela-hub { display: none !important; }
+    .musica-bloco { break-before: page; margin-bottom: 20px; }
+    .musica-cabecalho { box-shadow: none; border: none; border-bottom: 2px solid #000; padding: 8px 0; }
+    .parte { box-shadow: none; border: none; padding: 0; break-inside: avoid; }
+    .linha-cifra { color: #000; font-weight: bold; overflow: visible; }
+    .linha-obs { color: #333; }
+  }
 </style>
 </head>
 <body>
 
+<!-- TELA DE LOGIN -->
+<div id="tela-login" class="tela ativa">
+  <div class="login-card">
+    <h2>DraftPro</h2>
+    <p>Selecione a igreja para acessar o acervo</p>
+    <button class="btn-igreja" onclick="fazerLogin('Igreja Central')">⛪ Igreja Central <span>➔</span></button>
+    <button class="btn-igreja" onclick="fazerLogin('Igreja Videira')">⛪ Igreja Videira <span>➔</span></button>
+    <div style="margin-top: 24px; border-top: 1px solid var(--line); padding-top: 24px;">
+      <button class="btn" style="width: 100%; justify-content: center; border-style: dashed;" onclick="pedirSenhaAdmin()">🔐 Acesso Administrador</button>
+    </div>
+  </div>
+</div>
+
 <div class="app-container">
   
-  <!-- NAVEGAÇÃO -->
+  <!-- NAVEGAÇÃO / BOTTOM BAR / SIDEBAR -->
   <nav class="nav-bar">
-    <!-- Em desktop, podemos mostrar a logo aqui dentro também -->
-    <button class="nav-btn active" onclick="navigate('home')"><span>⌂</span> Início</button>
-    <button class="nav-btn" onclick="navigate('cultos')"><span>▣</span> Cultos</button>
-    <button class="nav-btn" onclick="navigate('execution')"><span>▶</span> Execução</button>
-    <button class="nav-btn" onclick="navigate('settings')"><span>⚙</span> Ajustes</button>
+    <div class="brand" style="display:none; @media(min-width:768px){display:flex;} margin-bottom:12px;">
+      <div class="brand-mark">D</div>
+      <div class="brand-name">DraftPro</div>
+    </div>
+    <button class="nav-btn active" onclick="mudarTelaApp('home')"><span>⌂</span> Início</button>
+    <button class="nav-btn" onclick="mudarTelaApp('cultos')"><span>📅</span> Cultos</button>
+    <button class="nav-btn" onclick="mudarTelaApp('acervo')"><span>📚</span> Acervo</button>
+    <button class="nav-btn" onclick="mudarTelaApp('settings')"><span>⚙</span> Ajustes</button>
   </nav>
 
-  <!-- CONTEÚDO PRINCIPAL -->
+  <!-- CONTEÚDO CENTRAL -->
   <div class="main-content">
     <header class="topbar">
       <div class="brand">
         <div class="brand-mark">D</div>
         <div class="brand-name">DraftPro</div>
       </div>
-      <button class="icon-btn" onclick="navigate('settings')">⚙</button>
+      <button class="btn" onclick="logout()" style="font-size:0.75rem;">Sair</button>
     </header>
 
     <div class="content-wrapper">
       
-      <!-- TELA: INÍCIO -->
-      <main id="home" class="screen active">
-        <h1>Bom dia, Adolfo</h1>
-        <p class="sub">Tudo pronto para o próximo culto.</p>
+      <!-- TELA: INÍCIO (HUB) -->
+      <main id="home" class="screen ativa">
+        <h1 id="saudacao-usuario">Olá, Adolfo</h1>
+        <p class="sub">Tudo pronto para o próximo culto na <span id="label-igreja-logada">Igreja</span>.</p>
 
         <div class="section-head"><h2>Acesso Rápido</h2></div>
-        <div class="grid-container">
-          <button class="quick-card" onclick="navigate('cultos')">
-            <strong>📅 Meus cultos</strong><span>Repertórios e escalas</span>
-          </button>
+        <div class="lista-cards" style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));">
           <button class="quick-card" onclick="novoRepertorio()">
-            <strong>✚ Novo culto</strong><span>Começar do zero</span>
+            <strong>✚ Novo Culto</strong><span>Criar repertório</span>
+          </button>
+          <button class="quick-card" onclick="abrirModalImportar()">
+            <strong>📥 Importar Cifra</strong><span>Texto ou PDF</span>
           </button>
         </div>
 
         <div class="section-head"><h2>Próximos Cultos</h2></div>
-        <div class="list-grid-container" id="home-lista-futuros">
-          <p style="color: var(--muted); font-size: 14px;">⏳ Carregando cultos...</p>
+        <div class="lista-cards" id="lista-futuros">
+          <p style="color: var(--muted); font-size: 14px;">Carregando cultos...</p>
         </div>
 
-        <div class="section-head"><h2>Histórico Antigo</h2></div>
-        <div class="list-grid-container" id="home-lista-historico"></div>
+        <div class="section-head"><h2>Histórico</h2></div>
+        <div class="lista-cards" id="lista-historico"></div>
       </main>
 
       <!-- TELA: CULTOS -->
       <main id="cultos" class="screen">
-        <h1>Meus cultos</h1><p class="sub">Organize seus repertórios.</p>
-        <button class="primary-btn">+ Novo Culto</button>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div><h1>Meus Cultos</h1><p class="sub">Gerencie a escala e os repertórios.</p></div>
+          <button class="btn btn-primario" onclick="novoRepertorio()">＋ Novo</button>
+        </div>
+        <div class="lista-cards" id="lista-cultos-geral" style="margin-top: 16px;"></div>
       </main>
 
-      <!-- TELA: EXECUÇÃO AO VIVO -->
-      <main id="execution" class="screen">
-        <div style="display:flex; justify-content:space-between; margin-bottom:16px;">
-           <div>
-             <h1 style="font-size: 22px;">Batendo a porta</h1>
-             <p class="sub" style="margin-bottom:0;">Florianópolis House Of Prayer</p>
-           </div>
-           <span class="badge ready">Tom: C#m</span>
+      <!-- TELA: ACERVO -->
+      <main id="acervo" class="screen">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px; flex-wrap:wrap; gap:10px;">
+          <div><h1>Acervo Geral</h1><p class="sub">Banco de músicas global.</p></div>
+          <button class="btn btn-sucesso" onclick="abrirModalImportar()">📥 Importar Cifra</button>
         </div>
-
-        <!-- Alvos de toque melhorados -->
-        <div class="structure-wrap">
-          <button class="seg active" onclick="activateSeg(this)">INT</button>
-          <button class="seg" onclick="activateSeg(this)">V1</button>
-          <button class="seg" onclick="activateSeg(this)">REF</button>
-          <button class="seg" onclick="activateSeg(this)">INT</button>
-          <button class="seg" onclick="activateSeg(this)">PONTE</button>
-        </div>
-
-        <div class="chords-box">
-          <div class="badge" style="display:inline-block; margin-bottom:12px;">INTRODUÇÃO (2x)</div>
-          <div class="chord-line">C#m &nbsp;&nbsp;&nbsp; A &nbsp;&nbsp;&nbsp; E &nbsp;&nbsp;&nbsp; B</div>
-          <div class="lyric-line">Instrumental — (Guitarras e Pad)</div>
-        </div>
-
-        <div class="chords-box">
-          <div class="badge" style="display:inline-block; margin-bottom:12px;">VERSO 1</div>
-          <div class="chord-line">C#m &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; A</div>
-          <div class="lyric-line">Quando eu ouvi bater a porta</div>
-          <div class="chord-line">E &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; B</div>
-          <div class="lyric-line">Eu entendi que era você</div>
+        <input type="text" id="busca-hub-acervo" placeholder="Buscar música no acervo..." style="width:100%; padding:12px 16px; border:1px solid var(--line); background:var(--surface); color:var(--text); border-radius:8px; outline:none; margin-bottom:16px;">
+        <div class="lista-cards" id="lista-biblioteca-completa">
+          <p style="color: var(--muted);">Carregando acervo...</p>
         </div>
       </main>
 
-      <!-- TELA: CONFIGURAÇÕES -->
+      <!-- TELA: MODO PALCO / EXECUÇÃO -->
+      <main id="execution" class="screen" style="padding:0;">
+        <header class="topo" style="top:0;">
+          <div class="topo-conteudo">
+            <div class="topo-esquerda">
+              <button class="btn-voltar" onclick="voltarAoHub()" title="Voltar">←</button>
+              <div class="topo-titulos">
+                <input type="text" class="titulo-repertorio" id="repo-titulo" value="Culto de Domingo">
+                <div class="topo-meta-linha">
+                  <input type="date" id="repo-data" title="Data">
+                  <input type="text" id="repo-subtitulo" value="Noite · Oficial" placeholder="Descrição...">
+                </div>
+              </div>
+            </div>
+            <div class="topo-acoes">
+              <div class="controles-zoom" title="Tamanho da fonte">
+                <button class="btn-zoom" onclick="ajustarZoom(-1)">A-</button>
+                <button class="btn-zoom" onclick="ajustarZoom(1)">A+</button>
+              </div>
+              <button class="btn btn-sucesso admin-only" onclick="salvarRepertorioNuvem()" id="btn-salvar-nuvem">☁️ Salvar</button>
+              <button class="btn btn-primario" onclick="imprimirCulto()">📄 Imprimir</button>
+              <button class="btn btn-primario" id="btn-bloqueio" onclick="alternarModoVisualizacao()">🔒 Travado</button>
+            </div>
+          </div>
+        </header>
+
+        <nav class="indice" id="nav-indice">
+          <div class="indice-lista" id="indice-lista"></div>
+        </nav>
+
+        <div class="content-wrapper" id="lista-musicas" style="padding-top: 24px;"></div>
+
+        <div class="content-wrapper admin-only" style="padding-bottom: 40px;">
+          <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+            <button class="btn btn-primario" onclick="abrirBibliotecaParaAdicionar()">📚 Puxar do Acervo</button>
+            <button class="btn" onclick="abrirModalImportar()">📥 Importar nova cifra</button>
+          </div>
+        </div>
+      </main>
+
+      <!-- TELA: AJUSTES -->
       <main id="settings" class="screen">
-        <h1>Configurações</h1><p class="sub">Ajustes do aplicativo</p>
-        
-        <div class="item-card" style="flex-direction:row; justify-content:space-between; align-items:center;">
+        <h1>Configurações</h1><p class="sub">Preferências do aplicativo</p>
+        <div class="card-item" style="flex-direction:row; justify-content:space-between; align-items:center;">
           <div>
-            <strong style="display:block;">Modo Escuro (Palco)</strong>
-            <span style="font-size:12px; color:var(--muted);">Reduz a luz durante o culto</span>
+            <strong>Modo Escuro (Palco)</strong>
+            <span style="font-size:12px; color:var(--muted); display:block;">Reduz o cansaço visual e luz no altar</span>
           </div>
           <div id="themeToggle" class="switch" onclick="toggleTheme()"></div>
         </div>
+        <div style="margin-top: 24px;">
+          <button class="btn" style="color: var(--danger); border-color: var(--danger);" onclick="logout()">Encerrar Sessão / Trocar Igreja</button>
+        </div>
       </main>
- 
+
     </div>
   </div>
 </div>
 
+<!-- MODAIS -->
+<div class="modal-fundo" id="modal-importar">
+  <div class="modal-caixa larga">
+    <h3>Importar Nova Cifra</h3>
+    <p style="font-size:0.85rem; color:var(--muted); margin-bottom:16px;">Cole a cifra bruta ou suba um PDF.</p>
+    
+    <div class="abas-importar">
+      <div class="aba-importar ativa" id="aba-texto" onclick="trocarAbaImportar('texto')">Colar Texto</div>
+      <div class="aba-importar" id="aba-pdf" onclick="trocarAbaImportar('pdf')">Arquivo PDF</div>
+    </div>
+
+    <div class="painel-importar ativo" id="painel-texto">
+      <textarea class="area-colar" id="import-texto-bruto" placeholder="Cole a cifra bruta aqui..."></textarea>
+      <div class="modal-botoes" style="justify-content: flex-start; margin-top: 8px;">
+        <button class="btn btn-primario" onclick="processarTextoBruto()">➔ Enviar para o Palco</button>
+      </div>
+    </div>
+
+    <div class="painel-importar" id="painel-pdf">
+      <label class="input-pdf" for="import-pdf">
+        📄 Clique para selecionar o PDF<br>
+        <span id="nome-arquivo-pdf" style="font-size: 0.75rem; color: var(--muted);"></span>
+      </label>
+      <input type="file" id="import-pdf" accept="application/pdf" style="display:none" onchange="extrairPDF(this)">
+    </div>
+    
+    <div style="text-align:right; margin-top:16px; border-top:1px solid var(--line); padding-top:16px;">
+      <button class="btn" onclick="fecharModal('modal-importar')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-fundo" id="modal-escolher-acervo">
+  <div class="modal-caixa larga">
+    <h3>Adicionar ao Culto</h3>
+    <input type="text" id="busca-modal-acervo" placeholder="Buscar no acervo..." style="width:100%; padding:10px; border:1px solid var(--line); background:var(--surface-2); color:var(--text); border-radius:6px; margin-bottom:16px; outline:none;">
+    <div class="lista-cards" id="lista-escolher-acervo-itens" style="max-height: 300px; overflow-y:auto;"></div>
+    <div class="modal-botoes" style="margin-top:16px;">
+      <button class="btn" onclick="fecharModal('modal-escolher-acervo')">Concluir</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-fundo" id="modal-confirmacao">
+  <div class="modal-caixa">
+    <h3 id="confirmacao-titulo">Confirmar ação</h3>
+    <p id="confirmacao-texto" style="color:var(--muted); font-size:0.9rem; margin:10px 0 20px;"></p>
+    <div class="modal-botoes">
+      <button class="btn" onclick="fecharModal('modal-confirmacao')">Cancelar</button>
+      <button class="btn btn-primario" id="confirmacao-btn-ok">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-aviso" id="toast-aviso"></div>
+
 <script>
-// Controle de Navegação das Telas
-function navigate(targetId) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyPaH0JpR8FYD0N-ZxK57f_clTpkmcS7x3YA1TAXANPg6V4wQC4-DWg-2DWKQ9GJ8L8/exec";
+
+let igrejaLogada = null;
+let isAdmin = false;
+let repertorioAtualId = null;
+let bibliotecaCache = [];
+let cacheCultosFuturos = [];
+let cacheCultosHistorico = [];
+let tamanhoFonteAtual = 0.95;
+
+function mostrarAviso(texto) {
+  const toast = document.getElementById('toast-aviso');
+  toast.textContent = texto;
+  toast.classList.add('visivel');
+  clearTimeout(toast._timeout);
+  toast._timeout = setTimeout(() => toast.classList.remove('visivel'), 3000);
+}
+
+function confirmarAcao(mensagem, aoConfirmar, titulo) {
+  document.getElementById('confirmacao-titulo').textContent = titulo || 'Confirmar ação';
+  document.getElementById('confirmacao-texto').textContent = mensagem;
+  const btnOk = document.getElementById('confirmacao-btn-ok');
+  const novoBtn = btnOk.cloneNode(true);
+  btnOk.parentNode.replaceChild(novoBtn, btnOk);
+  novoBtn.addEventListener('click', () => { fecharModal('modal-confirmacao'); aoConfirmar(); });
+  document.getElementById('modal-confirmacao').classList.add('aberto');
+}
+
+function escaparHtml(texto) {
+  return String(texto == null ? '' : texto).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function gerarId() { return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).substr(2, 9); }
+function fecharModal(id) { document.getElementById(id).classList.remove('aberto'); }
+
+// Navegação unificada do app
+function mudarTelaApp(idTela) {
+  if (idTela === 'cultos') { carregarDadosHub(); }
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('ativa'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   
-  document.getElementById(targetId).classList.add('active');
+  const telaAlvo = document.getElementById(idTela === 'cultos' ? 'cultos' : idTela === 'home' ? 'home' : idTela === 'acervo' ? 'acervo' : idTela === 'settings' ? 'settings' : 'execution');
+  if(telaAlvo) telaAlvo.classList.add('ativa');
   
-  // Ativa o botão correto na navbar
-  const btn = document.querySelector(`.nav-btn[onclick="navigate('${targetId}')"]`);
-  if(btn) btn.classList.add('active');
-  
-  window.scrollTo({top:0, behavior:'smooth'});
+  const btnNav = document.querySelector(`.nav-btn[onclick*="'${idTela}'"]`);
+  if(btnNav) btnNav.classList.add('active');
+  window.scrollTo({top: 0, behavior: 'smooth'});
 }
 
-// Controle visual das partes da música (estrutura)
-function activateSeg(btn) {
-  document.querySelectorAll('.seg').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-}
+function logout() { localStorage.clear(); location.reload(); }
 
-// Controle do Tema Escuro
-function toggleTheme() {
-  const isDark = document.body.classList.toggle('dark-theme');
-  const toggleBtn = document.getElementById('themeToggle');
-  toggleBtn.classList.toggle('on', isDark);
-  
-  // Opcional: Salvar no localStorage
-  // localStorage.setItem('draftpro_theme', isDark ? 'dark' : 'light');
-}
-
-// Inicializa o toggle visual se já estiver escuro (caso implemente persistência)
-window.onload = () => {
-  if (document.body.classList.contains('dark-theme')) {
-    document.getElementById('themeToggle').classList.add('on');
+window.addEventListener('DOMContentLoaded', () => {
+  const salva = localStorage.getItem('draftProIgreja');
+  if (salva) {
+    igrejaLogada = salva;
+    isAdmin = localStorage.getItem('draftProAdmin') === 'true';
+    document.getElementById('label-igreja-logada').textContent = isAdmin ? 'ADMIN' : igrejaLogada;
+    document.getElementById('tela-login').classList.remove('ativa');
+    carregarDadosHub();
+    if (localStorage.getItem('draftProTheme') === 'dark') toggleTheme(true);
   }
+});
+
+function fazerLogin(igreja) {
+  igrejaLogada = igreja;
+  isAdmin = (igreja === 'Administração');
+  localStorage.setItem('draftProIgreja', igreja);
+  localStorage.setItem('draftProAdmin', isAdmin);
+  document.getElementById('label-igreja-logada').textContent = isAdmin ? 'ADMIN' : igrejaLogada;
+  document.getElementById('tela-login').classList.remove('ativa');
+  carregarDadosHub();
+}
+
+function pedirSenhaAdmin() {
+  const senha = prompt('Digite a senha de Administrador:');
+  if (senha === 'culto123') fazerLogin('Administração');
+  else if (senha !== null) alert('Senha incorreta.');
+}
+
+async function carregarDadosHub() {
+  try {
+    const resCultos = await (await fetch(`${APPS_SCRIPT_URL}?acao=listarRepertorios&igreja=${igrejaLogada}&_=${Date.now()}`)).json();
+    cacheCultosFuturos = resCultos.futuros || [];
+    cacheCultosHistorico = resCultos.historico || [];
+    renderizarListasHub();
+
+    const resAcervo = await (await fetch(`${APPS_SCRIPT_URL}?acao=listarBiblioteca&_=${Date.now()}`)).json();
+    bibliotecaCache = resAcervo.musicas || [];
+    renderizarAcervoHub(bibliotecaCache);
+  } catch (e) { mostrarAviso("Erro ao sincronizar com a nuvem."); }
 }
 
 function renderizarListasHub() {
-  const gerarHTML = (lista) => lista.length === 0 
-    ? '<p style="color: var(--muted); font-size: 14px; grid-column: 1 / -1;">Nenhum culto encontrado.</p>' 
-    : lista.map(c => `
-        <div class="item-card" style="cursor:pointer;" onclick="carregarRepertorioDaNuvem('${c.id}')">
-          <div class="card-top">
-            <div>
-              <div class="card-title">${escaparHtml(c.titulo || 'Culto')}</div>
-              <div class="card-meta">🗓️ ${c.data ? String(c.data).substring(0,10).split('-').reverse().join('/') : 'Sem data'} ${c.subtitulo ? '— ' + escaparHtml(c.subtitulo) : ''}</div>
-            </div>
-            ${isAdmin 
-              ? `<button class="icon-btn" style="width:32px; height:32px; color:var(--danger); border:none;" onclick="event.stopPropagation(); confirmarExcluirRepertorio('${c.id}')">🗑️</button>` 
-              : `<span class="badge ready">PRONTO</span>`}
-          </div>
-        </div>`).join('');
-  
-  const containerFuturos = document.getElementById('home-lista-futuros') || document.getElementById('lista-futuros');
-  const containerHistorico = document.getElementById('home-lista-historico') || document.getElementById('lista-historico');
-  
-  if(containerFuturos) containerFuturos.innerHTML = gerarHTML(cacheCultosFuturos);
-  if(containerHistorico) containerHistorico.innerHTML = gerarHTML(cacheCultosHistorico);
+  const gerarHTML = (lista) => lista.length === 0 ? '<p style="color:var(--muted); font-size:14px;">Nenhum culto encontrado.</p>' : lista.map(c => `
+    <div class="card-item" onclick="carregarRepertorioDaNuvem('${c.id}')">
+      <div class="card-info">
+        <h4>${escaparHtml(c.titulo || 'Culto')}</h4>
+        <p>🗓️ ${c.data ? String(c.data).substring(0,10).split('-').reverse().join('/') : 'Sem data'} ${c.subtitulo ? '— ' + escaparHtml(c.subtitulo) : ''}</p>
+      </div>
+      ${isAdmin ? `<button class="btn" style="border:none; color:var(--danger);" onclick="event.stopPropagation(); confirmarExcluirRepertorio('${c.id}')">🗑️</button>` : `<span class="badge ready">PRONTO</span>`}
+    </div>`).join('');
+
+  document.getElementById('home-lista-futuros').innerHTML = gerarHTML(cacheCultosFuturos);
+  document.getElementById('home-lista-historico').innerHTML = gerarHTML(cacheCultosHistorico);
+  const containerGeral = document.getElementById('lista-cultos-geral');
+  if(containerGeral) containerGeral.innerHTML = gerarHTML([...cacheCultosFuturos, ...cacheCultosHistorico]);
 }
+
+function renderizarAcervoHub(lista) {
+  const container = document.getElementById('lista-biblioteca-completa');
+  if (!lista.length) { container.innerHTML = '<p style="color:var(--muted);">Acervo vazio.</p>'; return; }
+  
+  container.innerHTML = lista.map(m => `
+    <div class="card-item" onclick="carregarMusicaParaLeitura('${m.id}')">
+      <div class="card-info">
+        <h4>${escaparHtml(m.titulo)} <span class="badge" style="background:var(--brand-soft); color:var(--brand);">Tom: ${escaparHtml(m.tom || '-')}</span></h4>
+        <p>${escaparHtml(m.autores || 'Autor desconhecido')}</p>
+      </div>
+      ${isAdmin ? `<button class="btn" style="border:none; color:var(--danger);" onclick="event.stopPropagation(); confirmarExcluirMusicaAcervo('${m.id}')">🗑️</button>` : ''}
+    </div>`).join('');
+}
+
+async function carregarMusicaParaLeitura(id) {
+  mostrarAviso('⏳ Abrindo música...');
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL + '?acao=carregarMusica&id=' + encodeURIComponent(id) + '&_=' + Date.now());
+    const m = await resp.json();
+    if (m.status !== 'sucesso') { mostrarAviso('Música não encontrada.'); return; }
+    
+    repertorioAtualId = null;
+    document.getElementById('repo-titulo').value = 'Leitura: ' + (m.titulo || 'Música');
+    document.getElementById('repo-data').value = new Date().toISOString().split('T')[0];
+    document.getElementById('repo-subtitulo').value = 'Acervo Geral';
+    
+    const container = document.getElementById('lista-musicas');
+    container.innerHTML = '';
+    criarBlocoMusica({ titulo: m.titulo, autores: m.autores, instrumento: m.instrumento, tom: m.tom, bpm: m.bpm, compasso: m.compasso, partes: m.partes, bibliotecaId: m.id }, true);
+    
+    observarMusicas();
+    renderizarIndice();
+    mudarTelaApp('execution');
+  } catch (e) { mostrarAviso('Erro ao abrir música.'); }
+}
+
+document.getElementById('busca-hub-acervo').addEventListener('input', (e) => {
+  const termo = e.target.value.toLowerCase();
+  renderizarAcervoHub(bibliotecaCache.filter(m => (m.titulo||'').toLowerCase().includes(termo) || (m.autores||'').toLowerCase().includes(termo)));
+});
+
+// Manipulação do Palco e Editor de Cifras
+function voltarAoHub() { salvarLocal(); mudarTelaApp('home'); }
+function novoRepertorio() {
+  repertorioAtualId = null;
+  document.getElementById('repo-titulo').value = 'Culto de Domingo';
+  document.getElementById('repo-data').value = new Date().toISOString().split('T')[0];
+  document.getElementById('repo-subtitulo').value = '';
+  document.getElementById('lista-musicas').innerHTML = `
+    <div style="text-align:center; padding:40px 20px; background:var(--surface); border-radius:var(--radius); border:1px dashed var(--line);">
+      <h3>Nenhuma música neste culto</h3>
+      <p style="color:var(--muted); font-size:0.85rem; margin-bottom:16px;">Comece puxando do acervo ou importando.</p>
+      <div style="display:flex; gap:10px; justify-content:center;">
+        <button class="btn btn-primario" onclick="abrirBibliotecaParaAdicionar()">📚 Puxar do Acervo</button>
+        <button class="btn" onclick="abrirModalImportar()">📥 Importar Cifra</button>
+      </div>
+    </div>`;
+  renderizarIndice();
+  mudarTelaApp('execution');
+}
+
+function criarHtmlLinha(l) {
+  l = l || {};
+  return `
+    <div class="linha-grupo">
+      <div class="linha-cifra" contenteditable="true" spellcheck="false" data-placeholder="Acordes...">${escaparHtml(l.cifra)}</div>
+      <div class="linha-conteudo-duplo">
+        <div class="linha-letra" contenteditable="true" data-placeholder="Letra...">${escaparHtml(l.letra)}</div>
+        <div class="linha-obs" contenteditable="true" data-placeholder="Obs...">${escaparHtml(l.observacao)}</div>
+      </div>
+      <button class="btn-excluir-linha" style="right:25px;" onclick="quebrarParteAqui(this)" title="✂️ Separar parte">✂️</button>
+      <button class="btn-excluir-linha" onclick="removerLinha(this)" title="Excluir">✕</button>
+    </div>`;
+}
+
+function criarHtmlParte(p) {
+  const idParte = gerarId();
+  const linhasHtml = (p.linhas && p.linhas.length ? p.linhas : [{cifra:'', letra:'', observacao:''}]).map(criarHtmlLinha).join('');
+  return `
+    <div class="parte" id="${idParte}">
+      <div class="cab-parte">
+        <div class="cab-parte-esq">
+          <input type="text" class="nome-parte" value="${escaparHtml(p.nome || 'PARTE')}">
+          <div class="controles-parte">
+            <button class="btn-ctrl-parte" onclick="moverParte(this, 'cima')">▲</button>
+            <button class="btn-ctrl-parte" onclick="moverParte(this, 'baixo')">▼</button>
+            <button class="btn-ctrl-parte" onclick="duplicarParte(this)">📋</button>
+            <button class="btn-ctrl-parte" onclick="removerParte(this)" style="color:var(--danger)">✕</button>
+          </div>
+        </div>
+        <div class="meta-parte">
+          <div class="meta-campo"><span>Cód:</span><input type="text" class="campo-codigo-parte" value="${escaparHtml(p.codigo || '')}" maxlength="4"></div>
+          <div class="meta-campo"><span>Rep:</span><input type="text" class="campo-rep-parte" value="${escaparHtml(p.repeticao || '1x')}"></div>
+          <div class="meta-campo"><span>Dinâmica:</span><input type="text" class="campo-dinamica-parte" value="${escaparHtml(p.intensidade || 'Médio')}"></div>
+          <div class="meta-campo meta-campo-obs"><span>Obs:</span><input type="text" class="campo-obs-parte" value="${escaparHtml(p.observacao || '')}"></div>
+        </div>
+      </div>
+      ${linhasHtml}
+      <div style="margin-top:10px;"><button class="btn" style="font-size:0.75rem; padding:4px 8px;" onclick="adicionarLinhaNaParte(this)">＋ Linha</button></div>
+    </div>`;
+}
+
+function criarBlocoMusica(m, focar) {
+  const id = gerarId();
+  const partesHtml = (m.partes && m.partes.length ? m.partes : [{nome:'VERSO 1', linhas:[{cifra:'', letra:'', observacao:''}]}]).map(criarHtmlParte).join('');
+
+  const bloco = document.createElement('article');
+  bloco.className = 'musica-bloco';
+  bloco.id = id;
+  if (m.bibliotecaId) bloco.dataset.bibliotecaId = m.bibliotecaId;
+  
+  bloco.innerHTML = `
+    <div class="musica-cabecalho">
+      <div class="musica-info-principal">
+        <div class="musica-titulo-linha">
+          <input type="text" class="musica-titulo" value="${escaparHtml(m.titulo || 'Nova Música')}">
+          ${isAdmin ? `<button class="btn" style="border:none;" onclick="salvarMusicaNoAcervoDireto(this)" title="Atualizar no Acervo">📚</button>` : ''}
+          <button class="btn" style="border:none; color:var(--danger);" onclick="removerMusica(this)" title="Remover">🗑️</button>
+        </div>
+        <div class="musica-meta">
+          <span>Autores: <input type="text" class="campo-autores" value="${escaparHtml(m.autores || '')}"></span>
+          <div class="campo-instrumento"><span>🎸 Inst/Obs:</span> <input type="text" value="${escaparHtml(m.instrumento || '')}" placeholder="Ex: Violão base, Pad..."></div>
+        </div>
+      </div>
+      <div class="badges-musica">
+        <div class="tom-badge"><span class="tom-rotulo">Tom</span><input type="text" class="tom-valor" value="${escaparHtml(m.tom || 'C')}"></div>
+        <div class="tom-badge"><span class="tom-rotulo">BPM</span><input type="text" class="bpm-valor" value="${escaparHtml(m.bpm || '')}"></div>
+        <div class="tom-badge"><span class="tom-rotulo">Comp</span><input type="text" class="compasso-valor" value="${escaparHtml(m.compasso || '4/4')}"></div>
+      </div>
+    </div>
+    <div class="mapa-musica"></div>
+    ${partesHtml}
+    <div style="margin: 8px 0 20px 0;"><button class="btn" style="font-size: 0.75rem; padding: 4px 8px;" onclick="adicionarParteNaMusica(this)">＋ Adicionar parte</button></div>
+  `;
+  document.getElementById('lista-musicas').appendChild(bloco);
+  renderizarMapaMusica(bloco);
+  if (focar) { bloco.scrollIntoView({ behavior: 'smooth' }); }
+  return bloco;
+}
+
+function calcularCodigoParte(parte) {
+  const codigoInput = parte.querySelector('.campo-codigo-parte');
+  if (codigoInput && codigoInput.value.trim()) return codigoInput.value.trim();
+  const nome = (parte.querySelector('.nome-parte').value || '?').trim().split(/\s+/);
+  return nome.length >= 2 ? (nome[0][0] + nome[1][0]).toUpperCase() : nome[0].substring(0, 2).toUpperCase();
+}
+
+function renderizarMapaMusica(bloco) {
+  const mapaContainer = bloco.querySelector('.mapa-musica');
+  if (!mapaContainer) return;
+  const partes = bloco.querySelectorAll('.parte');
+  mapaContainer.innerHTML = Array.from(partes).map(parte => `
+    <button type="button" class="chip-mapa" data-alvo="${parte.id}">${escaparHtml(calcularCodigoParte(parte))}</button>
+  `).join('');
+}
+
+document.addEventListener('click', (e) => {
+  const chip = e.target.closest('.chip-mapa');
+  if (chip) { const alvo = document.getElementById(chip.dataset.alvo); if (alvo) alvo.scrollIntoView({ behavior: 'smooth' }); }
+});
+
+function adicionarParteNaMusica(btn) {
+  const bloco = btn.closest('.musica-bloco');
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = criarHtmlParte({ nome: 'REFRÃO', linhas: [{cifra:'', letra:'', observacao:''}] });
+  bloco.insertBefore(wrapper.firstElementChild, btn.parentElement);
+  renderizarMapaMusica(bloco);
+}
+
+function moverParte(btn, dir) {
+  const parte = btn.closest('.parte');
+  const bloco = parte.closest('.musica-bloco');
+  if (dir === 'cima' && parte.previousElementSibling && parte.previousElementSibling.classList.contains('parte')) {
+    parte.parentElement.insertBefore(parte, parte.previousElementSibling);
+  } else if (dir === 'baixo' && parte.nextElementSibling && parte.nextElementSibling.classList.contains('parte')) {
+    parte.parentElement.insertBefore(parte.nextElementSibling, parte);
+  }
+  renderizarMapaMusica(bloco);
+}
+
+function duplicarParte(btn) {
+  const parte = btn.closest('.parte');
+  const clone = parte.cloneNode(true);
+  clone.id = gerarId();
+  parte.after(clone);
+  renderizarMapaMusica(parte.closest('.musica-bloco'));
+}
+
+function removerParte(btn) {
+  const bloco = btn.closest('.musica-bloco');
+  if (bloco.querySelectorAll('.parte').length <= 1) { mostrarAviso('A música precisa de ao menos uma parte.'); return; }
+  btn.closest('.parte').remove();
+  renderizarMapaMusica(bloco);
+}
+
+function removerLinha(btn) { btn.closest('.linha-grupo').remove(); }
+function adicionarLinhaNaParte(btn) {
+  const parte = btn.closest('.parte');
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = criarHtmlLinha({cifra:'', letra:'', observacao:''});
+  parte.insertBefore(wrapper.firstElementChild, btn.parentElement);
+}
+function removerMusica(btn) {
+  btn.closest('.musica-bloco').remove();
+  renderizarIndice();
+}
+
+// Zoom e Modo Visualização Palco
+function alternarModoVisualizacao() {
+  const travado = document.body.classList.toggle('modo-visualizacao');
+  const btn = document.getElementById('btn-bloqueio');
+  btn.textContent = travado ? '✏️ Editando' : '🔒 Travado';
+  document.querySelectorAll('[contenteditable]').forEach(el => el.setAttribute('contenteditable', !travado));
+}
+
+function ajustarZoom(delta) {
+  tamanhoFonteAtual = Math.max(0.75, Math.min(1.3, tamanhoFonteAtual + (delta * 0.05)));
+  document.documentElement.style.setProperty('--tamanho-fonte', tamanhoFonteAtual + 'rem');
+  mostrarAviso('Zoom: ' + Math.round(tamanhoFonteAtual * 100) + '%');
+}
+
+const observador = new IntersectionObserver((entradas) => {
+  entradas.forEach(e => { if (e.isIntersecting) { musicaAtualId = e.target.id; renderizarIndice(); } });
+}, { rootMargin: '-100px 0px -60% 0px' });
+
+let musicaAtualId = null;
+function observarMusicas() {
+  observador.disconnect();
+  document.querySelectorAll('.musica-bloco').forEach(b => observador.observe(b));
+}
+
+function renderizarIndice() {
+  const lista = document.getElementById('indice-lista');
+  if (!lista) return;
+  lista.innerHTML = Array.from(document.querySelectorAll('.musica-bloco')).map((bloco, i) => `
+    <div class="indice-item ${bloco.id === musicaAtualId ? 'ativo' : ''}">
+      <span class="indice-num">${i + 1}</span>
+      <span class="indice-link" onclick="document.getElementById('${bloco.id}').scrollIntoView({behavior:'smooth'})">${escaparHtml(bloco.querySelector('.musica-titulo').value || 'Música')}</span>
+    </div>`).join('');
+}
+
+// Configurações e Tema Escuro
+function toggleTheme(forcarEstado) {
+  const isDark = typeof forcarEstado === 'boolean' ? forcarEstado : document.body.classList.toggle('dark-theme');
+  document.getElementById('themeToggle').classList.toggle('on', isDark);
+  localStorage.setItem('draftProTheme', isDark ? 'dark' : 'light');
+}
+
+// Importação e Sincronização Nuvem
+function abrirModalImportar() { document.getElementById('modal-importar').classList.add('aberto'); }
+function trocarAbaImportar(aba) {
+  document.getElementById('aba-texto').classList.toggle('ativa', aba === 'texto');
+  document.getElementById('aba-pdf').classList.toggle('ativa', aba === 'pdf');
+  document.getElementById('painel-texto').classList.toggle('ativo', aba === 'texto');
+  document.getElementById('painel-pdf').classList.toggle('ativo', aba === 'pdf');
+}
+
+function processarTextoBruto() {
+  const txt = document.getElementById('import-texto-bruto').value;
+  if(!txt.trim()) { mostrarAviso("Cole o texto!"); return; }
+  gerarMusicaNoPalco(txt);
+  fecharModal('modal-importar');
+}
+
+async function extrairPDF(input) {
+  const arquivo = input.files[0];
+  if (!arquivo) return;
+  document.getElementById('nome-arquivo-pdf').textContent = arquivo.name + ' — lendo...';
+  try {
+    const buffer = await arquivo.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+    let textoCompleto = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const pagina = await pdf.getPage(i);
+      const conteudo = await pagina.getTextContent();
+      textoCompleto += conteudo.items.map(i => i.str).join(' ') + '\n';
+    }
+    gerarMusicaNoPalco(textoCompleto);
+    fecharModal('modal-importar');
+  } catch(e) { mostrarAviso("Erro ao ler PDF."); }
+}
+
+function gerarMusicaNoPalco(textoBruto) {
+  const linhas = textoBruto.split('\n').filter(l => l.trim()).map(l => ({cifra:'', letra:l, observacao:''}));
+  criarBlocoMusica({ titulo: "Nova Música", partes:[{nome:"COMPLETA", linhas}] }, true);
+  observarMusicas();
+  renderizarIndice();
+  mudarTelaApp('execution');
+}
+
+function imprimirCulto() { window.print(); }
+function salvarLocal() {}
+async function salvarRepertorioNuvem() { mostrarAviso("Salvando..."); }
+async function carregarRepertorioDaNuvem(id) {}
+function confirmarExcluirRepertorio(id) {}
+function confirmarExcluirMusicaAcervo(id) {}
+function salvarMusicaNoAcervoDireto(btn) {}
+function abrirBibliotecaParaAdicionar() { document.getElementById('modal-escolher-acervo').classList.add('aberto'); }
 </script>
 </body>
 </html>
