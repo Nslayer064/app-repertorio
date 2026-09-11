@@ -2,33 +2,37 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DraftPro — Pro 4.0 (Completo)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#155487">
+<title>DraftPro — Premium</title>
 <link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
   :root {
-    --bg-app: #f4f6f8;
+    --bg-app: #f5f7f9;
     --surface: #ffffff;
-    --primaria: #0f4c81;
-    --primaria-hover: #093863;
-    --secundaria: #16a34a;
-    --texto-principal: #111827;
-    --texto-suave: #4b5563;
-    --borda: #e5e7eb;
-    --cifra-cor: #b45309;
+    --primaria: #155487;
+    --primaria-hover: #1c679f;
+    --secundaria: #18a957;
+    --texto-principal: #172131;
+    --texto-suave: #66717f;
+    --borda: #dfe5ea;
+    --cifra-cor: #a8662e;
     --obs-cor: #15803d;
-    --destaque-bg: #fffbeb;
-    --raio-card: 10px;
-    --sombra-card: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
-    --transicao: all 0.15s ease-in-out;
-    --tamanho-fonte: 0.9rem; /* Controlado pelo Zoom A-/A+ */
+    --destaque-bg: #eaf3f9;
+    --raio-card: 16px;
+    --sombra-card: 0 4px 12px rgba(23,33,49,.05);
+    --transicao: all 0.2s ease;
+    --tamanho-fonte: 0.95rem; 
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html { scroll-behavior: smooth; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
     background: var(--bg-app);
     color: var(--texto-principal);
     line-height: 1.5;
@@ -50,12 +54,12 @@
   .btn-igreja:hover { border-color: var(--primaria); background: #f0fdf4; color: var(--primaria); }
 
   /* ===== COMPONENTES GERAIS ===== */
-  .btn { padding: 7px 12px; border: 1px solid var(--borda); border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: var(--transicao); display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; background: var(--surface); color: var(--texto-principal); }
-  .btn:hover { background: #f9fafb; border-color: #d1d5db; }
-  .btn-primario { background: var(--primaria); color: white; border-color: var(--primaria); }
-  .btn-primario:hover { background: var(--primaria-hover); border-color: var(--primaria-hover); }
-  .btn-sucesso { background: var(--secundaria); color: white; border-color: var(--secundaria); }
-  .btn-sucesso:hover { background: #15803d; }
+  .btn { padding: 10px 16px; border: 1px solid var(--borda); border-radius: 12px; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: var(--transicao); display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; background: var(--surface); color: var(--texto-principal); }
+  .btn:hover { background: #f8fafc; opacity: 0.9; }
+  .btn-primario { background: var(--primaria); color: white; border: none; }
+  .btn-primario:hover { background: var(--primaria-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(21, 84, 135, 0.2); }
+  .btn-sucesso { background: var(--secundaria); color: white; border: none; }
+  .btn-sucesso:hover { background: #148e49; transform: translateY(-1px); }
   .container { max-width: 900px; margin: 0 auto; padding: 20px 16px 0; }
 
   /* ===== TELA 1: HUB DE GESTÃO (HOME) ===== */
@@ -71,8 +75,8 @@
   
   .secao-titulo { font-size: 1.1rem; font-weight: 700; margin: 24px 0 12px; color: var(--texto-principal); border-bottom: 2px solid var(--borda); padding-bottom: 8px; }
   .lista-cards { display: grid; gap: 12px; }
-  .card-item { background: var(--surface); border: 1px solid var(--borda); border-radius: 10px; padding: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: var(--transicao); box-shadow: var(--sombra-card); }
-  .card-item:hover { border-color: var(--primaria); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); transform: translateY(-1px); }
+  .card-item { background: var(--surface); border: 1px solid var(--borda); border-radius: var(--raio-card); padding: 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: var(--transicao); box-shadow: var(--sombra-card); }
+  .card-item:hover { border-color: var(--primaria); box-shadow: 0 8px 24px rgba(23,33,49,.1); transform: translateY(-2px); }
   .card-info h4 { font-size: 1.05rem; font-weight: 700; margin-bottom: 4px; color: var(--texto-principal); }
   .card-info p { font-size: 0.8rem; color: var(--texto-suave); }
   
@@ -539,10 +543,10 @@ function renderizarListasHub() {
     <div class="card-item" onclick="carregarRepertorioDaNuvem('${c.id}')">
       <div class="card-info">
         <h4>${escaparHtml(c.titulo || 'Culto')}</h4>
-        <p>🗓️ ${c.data ? c.data.split('-').reverse().join('/') : 'Sem data'} ${c.subtitulo ? '— ' + escaparHtml(c.subtitulo) : ''}</p>
+        <p>🗓️ ${c.data ? String(c.data).substring(0,10).split('-').reverse().join('/') : 'Sem data'} ${c.subtitulo ? '— ' + escaparHtml(c.subtitulo) : ''}</p>
       </div>
       <div class="admin-only" style="display:${isAdmin?'block':'none'}">
-        <button class="btn" style="border:none; color:#dc2626;" onclick="event.stopPropagation(); confirmarExcluirRepertorio('${c.id}')">🗑️</button>
+        <button class="btn" style="border:none; color:var(--danger, #dc2626);" onclick="event.stopPropagation(); confirmarExcluirRepertorio('${c.id}')">🗑️</button>
       </div>
     </div>`).join('');
   
@@ -555,15 +559,41 @@ function renderizarAcervoHub(lista) {
   if (!lista.length) { container.innerHTML = '<p class="item-vazio" style="text-align:left; padding:0;">Acervo vazio.</p>'; return; }
   
   container.innerHTML = lista.map(m => `
-    <div class="card-item">
+    <div class="card-item" onclick="carregarMusicaParaLeitura('${m.id}')">
       <div class="card-info">
-        <h4>${escaparHtml(m.titulo)} <span class="badge-igreja" style="background:#f1f5f9; color:var(--texto-suave);">Tom: ${escaparHtml(m.tom || '-')}</span></h4>
+        <h4>${escaparHtml(m.titulo)} <span class="badge-igreja" style="background:var(--destaque-bg); color:var(--primaria);">Tom: ${escaparHtml(m.tom || '-')}</span></h4>
         <p>${escaparHtml(m.autores || 'Autor desconhecido')}</p>
       </div>
       <div class="admin-only" style="display:${isAdmin?'block':'none'}">
-        <button class="btn" style="border:none; color:#dc2626;" onclick="confirmarExcluirMusicaAcervo('${m.id}')">🗑️</button>
+        <button class="btn" style="border:none; color:var(--danger, #dc2626);" onclick="event.stopPropagation(); confirmarExcluirMusicaAcervo('${m.id}')">🗑️</button>
       </div>
     </div>`).join('');
+}
+
+async function carregarMusicaParaLeitura(id) {
+  mostrarAviso('⏳ Abrindo música...');
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL + '?acao=carregarMusica&id=' + encodeURIComponent(id) + '&_=' + Date.now(), { cache: 'no-store' });
+    const m = await resp.json();
+    if (m.status !== 'sucesso') { mostrarAviso('Música não encontrada.'); return; }
+    
+    // Simula um culto provisório para ler a cifra
+    repertorioAtualId = null; 
+    document.getElementById('repo-titulo').value = 'Leitura: ' + (m.titulo || 'Música');
+    document.getElementById('repo-data').value = obterDataHojeFormatada();
+    document.getElementById('repo-subtitulo').value = 'Acervo Geral';
+    
+    const container = document.getElementById('lista-musicas');
+    container.innerHTML = '';
+    criarBlocoMusica({ titulo: m.titulo, autores: m.autores, instrumento: m.instrumento, tom: m.tom, bpm: m.bpm, compasso: m.compasso, partes: m.partes, bibliotecaId: m.id }, true);
+    
+    observarMusicas();
+    renderizarIndice();
+    mudarTela('tela-palco');
+    
+    if (!document.body.classList.contains('modo-visualizacao')) alternarModoVisualizacao(); // Trava para leitura limpa
+    mostrarAviso('✔️ Música carregada');
+  } catch (e) { mostrarAviso('❌ Erro ao abrir música.'); }
 }
 
 document.getElementById('busca-hub-acervo').addEventListener('input', (e) => {
