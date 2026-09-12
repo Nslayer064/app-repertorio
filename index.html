@@ -452,7 +452,7 @@ Mais que tudo..."></textarea>
 
 <script>
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyPaH0JpR8FYD0N-ZxK57f_clTpkmcS7x3YA1TAXANPg6V4wQC4-DWg-2DWKQ9GJ8L8/exec";
-let igrejaLogada=null,isAdmin=false,musicaAtualId=null,repertorioAtualId=null,bibliotecaCache=[],cacheCultosFuturos=[],cacheCultosHistorico=[],tamanhoFonteAtual=0.98,wakeLockAtivo=null,parteEditando=null;
+let igrejaLogada=null,isAdmin=false,musicaAtualId=null,repertorioAtualId=null,bibliotecaCache=[],cacheCultosFuturos=[],cacheCultosHistorico=[],tamanhoFonteAtual=0.98,wakeLockAtivo=null,parteEditando=null,pendentesCache=JSON.parse(localStorage.getItem('pendentesAcervo')||'[]');
 const NOTAS=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const NOTAS_BEMOL={'C#':'Db','D#':'Eb','F#':'Gb','G#':'Ab','A#':'Bb'};
 
@@ -479,9 +479,9 @@ window.addEventListener('DOMContentLoaded',()=>{
 setTimeout(()=>document.body.classList.add('pronto'),1500);
 function fazerLogin(igreja) {
   igrejaLogada = igreja;
-  isAdmin = false;
+  isAdmin = (igreja === 'Administração');
   localStorage.setItem('draftProIgreja', igreja);
-  localStorage.setItem('draftProAdmin', 'false');
+  localStorage.setItem('draftProAdmin', isAdmin ? 'true' : 'false');
   if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistration().then(reg => reg && reg.update());
   abrirHub();
 }
