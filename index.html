@@ -211,7 +211,9 @@
   .btn-acao-micro:hover{border-color:var(--primaria);color:var(--primaria)}
 
   /* MODO LEITURA - ESCONDE EDICAO */
-  body.modo-visualizacao .admin-only, body.modo-visualizacao .indice-seta, body.modo-visualizacao .topo-acoes button:not(.btn-bloqueio):not(.btn-zoom), body.modo-visualizacao .linha-acoes, body.modo-visualizacao .botoes-rodape-parte, body.modo-visualizacao .rodape-add, body.modo-visualizacao .btn-icone-limpo, body.modo-visualizacao .campo-instrumento, body.modo-visualizacao .linha-handle, body.modo-visualizacao .tom-controles{display:none !important}
+  .mapa-musica.fixado { position: sticky; top: 135px; z-index: 18; background: var(--bg-app); margin: 0 -16px 14px; padding: 10px 16px; border-bottom: 1px dashed var(--borda); box-shadow: var(--sombra-card); transition: background-color 0.25s ease; }
+  .mapa-musica.fixado .pin-btn { filter: none !important; opacity: 1 !important; transform: scale(1.1); }
+  body.modo-visualizacao .admin-only, body.modo-visualizacao .indice-seta, body.modo-visualizacao .topo-acoes button:not(.btn-bloqueio):not(.btn-zoom), body.modo-visualizacao .linha-acoes, body.modo-visualizacao .botoes-rodape-parte, body.modo-visualizacao .rodape-add, body.modo-visualizacao .btn-icone-limpo, body.modo-visualizacao .campo-instrumento, body.modo-visualizacao .linha-handle{display:none !important}
   body.modo-visualizacao input, body.modo-visualizacao [contenteditable]{pointer-events:none;border:none !important;background:transparent !important}
   body.modo-visualizacao [contenteditable]:empty:before, body.modo-visualizacao .linha-cifra:empty, body.modo-visualizacao .linha-obs:empty{display:none !important}
   body.modo-visualizacao .linha-grupo{border:none !important;background:transparent !important;padding:2px 0;margin-bottom:8px}
@@ -690,14 +692,28 @@ function renderizarMapaMusica(bloco){
   const mapa=bloco.querySelector('.mapa-musica'); if(!mapa) return;
   const partes=bloco.querySelectorAll('.parte');
   if(!partes.length){mapa.innerHTML='';return}
-  mapa.innerHTML=Array.from(partes).map(p=>{
+
+  const unicos = new Set();
+  let htmlChips = '';
+  Array.from(partes).forEach(p=>{
     const nome=p.querySelector('.nome-parte')?.value||'Parte';
     const d=p.querySelector('.dados-parte');
     const codigo=d?.dataset.codigo||calcularCodigoParte(p);
-    const rep=d?.dataset.rep||'1x';
     const din=d?.dataset.intensidade||p.dataset.dinamica||'Médio';
-    return `<button class="chip-mapa" data-dinamica="${escaparHtml(din)}" data-alvo="${p.id}" title="${escaparHtml(nome)}">${escaparHtml(codigo)} <small>${escaparHtml(rep)}</small></button>`;
-  }).join('');
+    
+    // Filtro de agrupamento (Só renderiza se o código ainda não existir no mapa)
+    if(!unicos.has(codigo.toLowerCase())){
+      unicos.add(codigo.toLowerCase());
+      htmlChips += `<button class="chip-mapa" data-dinamica="${escaparHtml(din)}" data-alvo="${p.id}" title="${escaparHtml(nome)}">${escaparHtml(codigo)}</button>`;
+    }
+  });
+
+  // Checa a preferência salva do usuário e aplica o estado inicial
+  const isFixado = localStorage.getItem('mapaFixado') === 'true';
+  if(isFixado) mapa.classList.add('fixado'); else mapa.classList.remove('fixado');
+
+  // Injeta o botão Pin junto com os chips filtrados
+  mapa.innerHTML = `<button class="pin-btn admin-only" onclick="this.parentElement.classList.toggle('fixado'); localStorage.setItem('mapaFixado', this.parentElement.classList.contains('fixado')); mostrarAviso(this.parentElement.classList.contains('fixado') ? '📌 Índice fixado no topo' : 'Índice solto');" title="Fixar/Soltar Índice" style="border:none;background:transparent;cursor:pointer;padding:4px;border-radius:6px;margin-right:6px;filter:grayscale(1);opacity:0.6;font-size:0.9rem;transition:var(--transicao)">📌</button>` + htmlChips;
 }
 document.addEventListener('click',e=>{const chip=e.target.closest('.chip-mapa'); if(chip){const alvo=document.getElementById(chip.dataset.alvo); if(alvo) alvo.scrollIntoView({behavior:'smooth',block:'start'})}});
 
