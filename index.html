@@ -815,12 +815,41 @@ function abrirSheetParte(idParte){
 function fecharSheetParte(){document.getElementById('sheet-fundo').classList.remove('aberto'); document.getElementById('sheet-parte').classList.remove('aberto'); parteEditando=null}
 function salvarSheetParte(){
   if(!parteEditando) return;
-  const nome=document.getElementById('sheet-nome').value||'PARTE'; const codigo=document.getElementById('sheet-codigo').value||''; const rep=document.getElementById('sheet-rep').value; const din=document.getElementById('sheet-dinamica').value; const obs=document.getElementById('sheet-obs').value;
-  parteEditando.querySelector('.nome-parte').value=nome;
-  parteEditando.dataset.dinamica=din;
-  let dados=parteEditando.querySelector('.dados-parte'); if(!dados){dados=document.createElement('div'); dados.className='dados-parte'; dados.style.display='none'; parteEditando.appendChild(dados)}
-  dados.dataset.codigo=codigo; dados.dataset.rep=rep; dados.dataset.intensidade=din; dados.dataset.obs=obs; dados.dataset.nome=nome;
-  renderizarMapaMusica(parteEditando.closest('.musica-bloco')); fecharSheetParte(); salvarLocal(); mostrarAviso('Parte atualizada');
+  const nome = document.getElementById('sheet-nome').value || 'PARTE';
+  const codigo = document.getElementById('sheet-codigo').value || '';
+  const rep = document.getElementById('sheet-rep').value || '1x';
+  const din = document.getElementById('sheet-dinamica').value || 'Médio';
+  const obs = document.getElementById('sheet-obs').value || '';
+
+  // Atualiza o input visual do nome da parte
+  parteEditando.querySelector('.nome-parte').value = nome;
+  parteEditando.dataset.dinamica = din;
+
+  // Atualiza o resumo visual (código • repetição • dinâmica) que fica no cabeçalho da parte
+  const metaResumo = parteEditando.querySelector('.meta-parte-resumo');
+  if(metaResumo) {
+    metaResumo.innerHTML = `<span>${escaparHtml(codigo || 'IN')}</span><span>${escaparHtml(rep)}</span><span>${escaparHtml(din)}</span>`;
+  }
+
+  // Atualiza os dados ocultos (estado)
+  let dados = parteEditando.querySelector('.dados-parte');
+  if(!dados){
+    dados = document.createElement('div');
+    dados.className = 'dados-parte';
+    dados.style.display = 'none';
+    parteEditando.appendChild(dados);
+  }
+  dados.dataset.codigo = codigo;
+  dados.dataset.rep = rep;
+  dados.dataset.intensidade = din;
+  dados.dataset.obs = obs;
+  dados.dataset.nome = nome;
+
+  const blocoMusica = parteEditando.closest('.musica-bloco');
+  renderizarMapaMusica(blocoMusica);
+  fecharSheetParte();
+  salvarLocal();
+  mostrarAviso('Parte atualizada com sucesso!');
 }
 
 // DADOS
