@@ -310,6 +310,7 @@
     <div class="hub-abas">
       <button class="hub-aba ativa" onclick="mudarAbaHub('cultos', this)">🗓️ Meus Cultos</button>
       <button class="hub-aba" onclick="mudarAbaHub('acervo', this)">📚 Acervo</button>
+      <button class="hub-aba" id="aba-validacao" style="display:none" onclick="mudarAbaHub('validacao', this)">✅ Validação <span id="badge-validacao" class="badge badge-pendente" style="display:none;background:#FEF3C7;color:#92400E;margin-left:4px">0</span></button>
     </div>
   </header>
   <div class="container">
@@ -331,6 +332,11 @@
       </div>
       <div id="lista-biblioteca-completa" class="lista-cards"></div>
     </div>
+    <div id="painel-validacao" class="hub-painel">
+      <h3 class="secao-titulo">Fila de Validação</h3>
+      <p style="font-size:.82rem;color:var(--texto-suave);margin-bottom:16px">Músicas enviadas pelas igrejas. Se o nome já existe, o app gera um nome único automaticamente. Aprove ou edite.</p>
+      <div id="lista-validacao" class="lista-cards"></div>
+    </div>
   </div>
 </div>
 
@@ -348,9 +354,10 @@
         </div>
       </div>
       <div class="topo-acoes">
-        <div class="controles-zoom" title="Tamanho">
+        <div class="controles-zoom" title="Tamanho e Modos">
           <button class="btn-zoom" onclick="ajustarZoom(-1)">A-</button>
           <button class="btn-zoom" onclick="ajustarZoom(1)">A+</button>
+          <button class="btn-zoom" onclick="alternarColapso()" id="btn-colapso" title="Agrupar repetições idênticas" style="font-weight:800">🔁</button>
         </div>
         <button class="btn btn-sucesso admin-only" onclick="salvarRepertorioNuvem()" id="btn-salvar-nuvem">☁️ <span class="texto-btn">Salvar</span></button>
         <button class="btn btn-primario" onclick="imprimirCulto()">📄 <span class="texto-btn">Imprimir</span></button>
@@ -936,6 +943,182 @@ function quebrarParteAqui(btn){
 
 function configurarPull(idPainel,idInd){const painel=document.getElementById(idPainel); const ind=document.getElementById(idInd); if(!painel||!ind) return; let sy=0,pux=false; painel.addEventListener('touchstart',e=>{if(window.scrollY>4){pux=false;return} sy=e.touches[0].clientY; pux=true},{passive:true}); painel.addEventListener('touchmove',e=>{if(!pux) return; const d=e.touches[0].clientY-sy; if(d>60){ind.textContent='⬇️ Solte para atualizar'; ind.classList.add('visivel')}}, {passive:true}); painel.addEventListener('touchend',e=>{if(!pux) return; pux=false; const d=e.changedTouches[0].clientY-sy; if(d>60){ind.textContent='⏳ Atualizando...'; vibrar(10); carregarDadosHub().finally(()=>ind.classList.remove('visivel'))} else ind.classList.remove('visivel')},{passive:true})}
 configurarPull('painel-cultos','pull-indicador-cultos'); configurarPull('painel-acervo','pull-indicador-acervo');
+
+// --- COLAPSO INTELIGENTE E VALIDAÇÃO ---
+let colapsoAtivo = false;
+
+function alternarColapso(){
+  colapsoAtivo = !colapsoAtivo;
+  const btn = document.getElementById('btn-colapso');
+  if(btn) btn.classList.toggle('ativo', colapsoAtivo);
+  if(colapsoAtivo) aplicarColapsoInteligente(); else removerColapsos();
+  mostrarAviso(colapsoAtivo ? 'Repetições agrupadas' : 'Repetições expandidas');
+}
+
+function aplicarColapsoInteligente(){
+  if(!document.body.classList.contains('modo-visualizacao')) return;
+  document.querySelectorAll('.parte').forEach(parte => {
+    parte.querySelectorAll('.repeticao-colapso').forEach(e => e.remove());
+    parte.querySelectorAll('.linha-grupo.colapsado').forEach(e => { e.classList.remove('colapsado'); e.style.display = ''; });
+    const grupos = [...parte.querySelectorAll('.linha-grupo')];
+    if(grupos.length < 4) return;
+    const letras = grupos.map(g => (g.querySelector('.linha-letra')?.innerText || '').trim().toLowerCase());
+    let i = 0;
+    while(i <= letras.length - 4){
+      const a = letras[i], b = letras[i+1];
+      if(!a || !b){ i++; continue; }
+      if(a === letras[i+2] && b === letras[i+3]){
+        let count = 2; let j = i + 4;
+        while(j + 1 < letras.length && letras[j] === a && letras[j+1] === b){ count++; j += 2; }
+        if(count >= 2){
+          for(let k = i + 2; k < j; k++){
+            grupos[k].classList.add('colapsado');
+            grupos[k].style.display = 'none';
+          }
+          const badge = document.createElement('div');
+          badge.className = 'repeticao-colapso';
+          badge.style.cssText = 'display:flex;align-items:center;justify-content:space-between;background:var(--destaque-bg);border:1px dashed var(--borda-forte);border-radius:8px;padding:6px 10px;margin:6px 0;font-size:.74rem;color:var(--cifra-cor);font-weight:700;';
+          badge.innerHTML = `<span>🔁 Repete ${count}x — "${(grupos[i].querySelector('.linha-letra')?.innerText || '').slice(0,25)}..."</span><button class="btn" style="padding:2px 8px;font-size:.68rem" onclick="toggleColapso(this)">Mostrar</button>`;
+          badge.dataset.inicio = i; badge.dataset.fim = j;
+          grupos[i+1].after(badge);
+          i = j; continue;
+        }
+      }
+      i++;
+    }
+  });
+}
+
+function removerColapsos(){
+  document.querySelectorAll('.repeticao-colapso').forEach(e => e.remove());
+  document.querySelectorAll('.linha-grupo.colapsado').forEach(e => { e.classList.remove('colapsado'); e.style.display = ''; });
+}
+
+function toggleColapso(btn){
+  const badge = btn.closest('.repeticao-colapso');
+  const parte = badge.closest('.parte');
+  const inicio = parseInt(badge.dataset.inicio); const fim = parseInt(badge.dataset.fim);
+  const grupos = [...parte.querySelectorAll('.linha-grupo')];
+  const expandido = btn.textContent === 'Esconder';
+  for(let k = inicio + 2; k < fim; k++){
+    grupos[k].style.display = expandido ? 'none' : '';
+    if(!expandido) grupos[k].classList.add('colapsado'); else grupos[k].classList.remove('colapsado');
+  }
+  btn.textContent = expandido ? 'Mostrar' : 'Esconder';
+}
+
+function gerarNomeUnico(tituloBase){
+  const existentes = bibliotecaCache.map(m => m.titulo.trim().toLowerCase());
+  const pendentes = pendentesCache.map(m => m.titulo.trim().toLowerCase());
+  const todos = [...existentes, ...pendentes];
+  let nome = tituloBase.trim(); let c = 2;
+  while(todos.includes(nome.toLowerCase())){
+    nome = `${tituloBase.trim()} (${c})`; c++;
+  }
+  return nome;
+}
+
+function atualizarBadgeValidacao(){
+  const badge = document.getElementById('badge-validacao');
+  if(!badge) return;
+  const qtd = pendentesCache.length;
+  if(qtd > 0){ badge.textContent = qtd; badge.style.display = 'inline-block'; } else badge.style.display = 'none';
+}
+
+function renderizarValidacao(){
+  const cont = document.getElementById('lista-validacao');
+  if(!cont) return;
+  if(!pendentesCache.length){
+    cont.innerHTML = '<p style="color:var(--texto-suave);font-size:14px">Nenhuma música pendente na fila.</p>';
+    return;
+  }
+  cont.innerHTML = pendentesCache.map(p => `
+    <div class="card-item" style="flex-direction:column;align-items:stretch;cursor:default">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+        <div>
+          <div class="card-title">${escaparHtml(p.titulo)} ${p.tituloOriginal ? `<span class="badge" style="background:#FEF3C7;color:#92400E">original: "${escaparHtml(p.tituloOriginal)}"</span>` : ''}</div>
+          <div class="card-meta">Enviado por ${escaparHtml(p.solicitadoPor||'Igreja')} • Tom: ${escaparHtml(p.tom||'-')}</div>
+        </div>
+        <span class="badge" style="background:#FEF3C7;color:#92400E">PENDENTE</span>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:12px;flex-wrap:wrap">
+        <button class="btn btn-sucesso" style="font-size:.76rem;padding:6px 10px" onclick="aprovarMusicaPendente('${p.id}')">✅ Aprovar</button>
+        <button class="btn" style="font-size:.76rem;padding:6px 10px" onclick="editarTituloPendente('${p.id}')">✏️ Renomear</button>
+        <button class="btn btn-danger" style="font-size:.76rem;padding:6px 10px" onclick="rejeitarMusicaPendente('${p.id}')">🗑️ Rejeitar</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function aprovarMusicaPendente(id){
+  const idx = pendentesCache.findIndex(p => p.id === id); if(idx < 0) return;
+  const p = pendentesCache[idx];
+  const nomeFinal = gerarNomeUnico(p.titulo);
+  p.titulo = nomeFinal;
+  try{
+    const resp = await fetch(APPS_SCRIPT_URL, {method:'POST', body:JSON.stringify({acao:'aprovarMusica', id:p.id, titulo:nomeFinal})});
+    const res = await resp.json();
+    if(res.status === 'sucesso'){
+      bibliotecaCache.push({id:res.id, titulo:nomeFinal, autores:p.autores, tom:p.tom});
+      pendentesCache.splice(idx, 1);
+      localStorage.setItem('pendentesAcervo', JSON.stringify(pendentesCache));
+      renderizarValidacao(); renderizarAcervoHub(bibliotecaCache); atualizarBadgeValidacao();
+      mostrarAviso(`✔️ "${nomeFinal}" aprovada!`);
+      carregarDadosHub();
+    } else { mostrarAviso('Erro ao aprovar.'); }
+  } catch(e){ mostrarAviso('Erro de conexão.'); }
+}
+
+async function rejeitarMusicaPendente(id){
+  confirmarAcao('Rejeitar e apagar da fila?', async () => {
+    try{
+      await fetch(APPS_SCRIPT_URL, {method:'POST', body:JSON.stringify({acao:'rejeitarMusica', id})});
+      pendentesCache = pendentesCache.filter(p => p.id !== id);
+      localStorage.setItem('pendentesAcervo', JSON.stringify(pendentesCache));
+      renderizarValidacao(); atualizarBadgeValidacao(); mostrarAviso('Rejeitada.');
+    } catch(e){ mostrarAviso('Erro de conexão.'); }
+  }, 'Rejeitar?');
+}
+
+function editarTituloPendente(id){
+  const p = pendentesCache.find(x => x.id === id); if(!p) return;
+  const novo = prompt('Novo título para a música:', p.titulo); if(!novo || !novo.trim()) return;
+  const nomeUnico = gerarNomeUnico(novo.trim());
+  p.titulo = nomeUnico;
+  localStorage.setItem('pendentesAcervo', JSON.stringify(pendentesCache));
+  renderizarValidacao(); mostrarAviso(`Renomeado para "${nomeUnico}"`);
+}
+
+// Atualizar abrirHub e mudarAbaHub originais para suportar a aba de Validação
+const _abrirHubOriginal = abrirHub;
+abrirHub = function(){
+  _abrirHubOriginal();
+  const abaVal = document.getElementById('aba-validacao');
+  if(abaVal) abaVal.style.display = isAdmin ? 'inline-block' : 'none';
+  if(isAdmin){
+    fetch(APPS_SCRIPT_URL + '?acao=listarPendentes&_='+Date.now()).then(r=>r.json()).then(res=>{
+      if(res.pendentes){ pendentesCache = res.pendentes; localStorage.setItem('pendentesAcervo', JSON.stringify(pendentesCache)); atualizarBadgeValidacao(); }
+    }).catch(()=>{});
+  }
+};
+
+const _mudarAbaHubOriginal = mudarAbaHub;
+mudarAbaHub = function(aba, btn){
+  _mudarAbaHubOriginal(aba, btn);
+  const painelVal = document.getElementById('painel-validacao');
+  if(painelVal) painelVal.classList.toggle('ativo', aba === 'validacao');
+  if(aba === 'validacao') renderizarValidacao();
+};
+
+const _alternarModoVisualizacaoOriginal = alternarModoVisualizacao;
+alternarModoVisualizacao = function(){
+  _alternarModoVisualizacaoOriginal();
+  if(document.body.classList.contains('modo-visualizacao') && colapsoAtivo){
+    setTimeout(aplicarColapsoInteligente, 150);
+  } else {
+    removerColapsos();
+  }
+};
 
 // SERVICE WORKER (PWA) - CONTROLE DE ATUALIZACAO
 if ('serviceWorker' in navigator) {
