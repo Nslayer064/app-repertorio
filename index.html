@@ -477,7 +477,14 @@ window.addEventListener('DOMContentLoaded',()=>{
   if(rasc&&!salva){try{const d=JSON.parse(rasc);if(d.html||d.musicas){igrejaLogada='Demo';abrirHub();setTimeout(()=>carregarRascunhoLocal(),300)}}catch(e){}}
 });
 setTimeout(()=>document.body.classList.add('pronto'),1500);
-function fazerLogin(igreja){igrejaLogada=igreja;isAdmin=false;localStorage.setItem('draftProIgreja',igreja);localStorage.setItem('draftProAdmin','false');abrirHub()}
+function fazerLogin(igreja) {
+  igrejaLogada = igreja;
+  isAdmin = false;
+  localStorage.setItem('draftProIgreja', igreja);
+  localStorage.setItem('draftProAdmin', 'false');
+  if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistration().then(reg => reg && reg.update());
+  abrirHub();
+}
 function pedirSenhaAdmin(){const s=prompt('Senha admin:');if(s==='culto123'){fazerLogin('Administração');isAdmin=true;localStorage.setItem('draftProAdmin','true')}else if(s!==null)alert('Senha incorreta.')}
 function carregarDemo(){igrejaLogada='Demo';isAdmin=true;document.getElementById('label-igreja-logada').textContent='DEMO';mudarTela('tela-hub');carregarDadosHub(true)}
 function abrirHub(){document.getElementById('label-igreja-logada').textContent=isAdmin?'ADMIN':igrejaLogada;mudarTela('tela-hub');carregarDadosHub()}
@@ -929,6 +936,31 @@ function quebrarParteAqui(btn){
 
 function configurarPull(idPainel,idInd){const painel=document.getElementById(idPainel); const ind=document.getElementById(idInd); if(!painel||!ind) return; let sy=0,pux=false; painel.addEventListener('touchstart',e=>{if(window.scrollY>4){pux=false;return} sy=e.touches[0].clientY; pux=true},{passive:true}); painel.addEventListener('touchmove',e=>{if(!pux) return; const d=e.touches[0].clientY-sy; if(d>60){ind.textContent='⬇️ Solte para atualizar'; ind.classList.add('visivel')}}, {passive:true}); painel.addEventListener('touchend',e=>{if(!pux) return; pux=false; const d=e.changedTouches[0].clientY-sy; if(d>60){ind.textContent='⏳ Atualizando...'; vibrar(10); carregarDadosHub().finally(()=>ind.classList.remove('visivel'))} else ind.classList.remove('visivel')},{passive:true})}
 configurarPull('painel-cultos','pull-indicador-cultos'); configurarPull('painel-acervo','pull-indicador-acervo');
+
+// SERVICE WORKER (PWA) - CONTROLE DE ATUALIZACAO
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').then((reg) => {
+      reg.update(); // Força checar se há versão nova
+      reg.addEventListener('updatefound', () => {
+        const novoWorker = reg.installing;
+        novoWorker.addEventListener('statechange', () => {
+          if (novoWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            mostrarAviso('Nova versão encontrada — atualizando...');
+            setTimeout(() => location.reload(), 1200);
+          }
+        });
+      });
+    });
+  });
+
+  let jaRecarregou = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (jaRecarregou) return;
+    jaRecarregou = true;
+    location.reload();
+  });
+}
 </script>
 </body>
 </html>
