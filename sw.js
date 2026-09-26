@@ -1,5 +1,5 @@
 // Troque esse número a CADA deploy novo no GitHub — é o gatilho da atualização.
-const CACHE_VERSION = 'draftpro-v5';
+const CACHE_VERSION = 'draftpro-v6';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 
 // Arquivos estáticos que raramente mudam (ícones, fontes locais etc).
