@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#155487">
 <link rel="manifest" href="./manifest.json">
-<title>DraftPro v10.3 - Merge Completo (Edição + PDF)</title>
+<title>DraftPro v10.4 - Merge Completo (Edição + PDF)</title>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
 <!-- Biblioteca PDF.js resgatada -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -147,6 +147,12 @@ h1{font-size:28px;line-height:1.1;margin:2px 0 7px;letter-spacing:-1px;font-fami
 .sheet-campo input,.sheet-campo select{padding:10px 12px;border:1px solid var(--line);border-radius:12px;font-size:14px;outline:none;background:var(--surface-2);color:var(--text);font-weight:600}
 .sheet-campo.full{grid-column:1 / -1}
 
+/* ==== FIX: toggle visual das Configurações (antes não existia CSS nenhum) ==== */
+.switch{width:46px;height:27px;border-radius:999px;background:var(--line);padding:3px;display:flex;align-items:center;cursor:pointer;transition:background .2s;flex-shrink:0}
+.switch.on{background:var(--brand)}
+.switch i{transition:transform .2s}
+.switch.on i{transform:translateX(19px)}
+
 /* MODO CORRIDO / VISUALIZAÇÃO */
 body.modo-corrido .chordline{white-space:pre; font-size:16px}
 body.modo-corrido .section{border:none;box-shadow:none;background:transparent;margin:0 0 18px}
@@ -163,7 +169,7 @@ body.modo-corrido [contenteditable]:empty:before{display:none !important}
 </head>
 <body>
 <div class="app">
-  <div class="status"><span id="statusTime">--:--</span><span id="statusSync">☁️ Pronto • v10.3</span></div>
+  <div class="status"><span id="statusTime">--:--</span><span id="statusSync">☁️ Pronto • v10.4</span></div>
   <header class="topbar">
     <div class="brand"><div class="brand-mark">D</div><div class="brand-name">DraftPro</div><div class="church" id="churchName">IGREJA CENTRAL</div></div>
     <div style="display:flex;gap:8px"><button class="icon-btn" onclick="toggleDarkMode()">🌙</button><button class="icon-btn" onclick="logout()">↪</button></div>
@@ -172,7 +178,7 @@ body.modo-corrido [contenteditable]:empty:before{display:none !important}
   <!-- LOGIN -->
   <main id="login" class="screen active" style="padding-top:40px">
     <div style="background:var(--surface);border-radius:20px;padding:26px;border:1px solid var(--line);box-shadow:var(--shadow);text-align:center;max-width:380px;margin:20px auto">
-      <h1>DraftPro v10.3</h1><p class="sub">Resgate Motor de Edição + PDF</p>
+      <h1>DraftPro v10.4</h1><p class="sub">Resgate Motor de Edição + PDF</p>
       <button class="secondary" style="margin-bottom:8px" onclick="fazerLogin('Igreja Central')">⛪ Igreja Central ➔</button>
       <button class="secondary" style="margin-bottom:16px" onclick="fazerLogin('Igreja Videira')">⛪ Igreja Videira ➔</button>
       <div style="display:flex;gap:8px"><button class="secondary" style="border-style:dashed" onclick="pedirSenhaAdmin()">🔐 Admin</button><button class="secondary" onclick="carregarDemo()">👀 Demo</button></div>
@@ -366,9 +372,24 @@ Vem meu amor..."></textarea></div>
 <script>
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyPaH0JpR8FYD0N-ZxK57f_clTpkmcS7x3YA1TAXANPg6V4wQC4-DWg-2DWKQ9GJ8L8/exec";
 let igrejaLogada=null,isAdmin=false,cacheCultosFuturos=[],bibliotecaCache=[],pendentesCache=JSON.parse(localStorage.getItem('pendentesAcervo')||'[]'),currentCultoId=null,currentSongId=null,editingCultoId=null,editingSongId=null,originalKey='C',transposeOffset=0,autoScrollInterval=null,musicaLeituraAtual=null,tamanhoFonteAtual=0.96;
+let currentScreen='login'; // FIX: faltava declarar; evitava ReferenceError em visibilitychange
 const NOTAS=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const CHORDS_SHARP=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 const CHORDS_FLAT=['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+const MAPA_ENARMONICO={'Db':'C#','Eb':'D#','Gb':'F#','Ab':'G#','Bb':'A#'};
+// FIX: regex de acorde centralizada num só lugar (antes existiam versões
+// levemente diferentes em isChordToken e em transposeSong — corrigir uma
+// e esquecer a outra era fonte garantida de bug de transposição).
+const REGEX_ACORDE=/[A-G][#b]?(?:m|maj7|m7|7M|m6|6|9|11|13|sus2|sus4|dim|aug|add9|m9|maj9|2|4)?(?:\/[A-G][#b]?)?/g;
+
+function transporNota(nota,semitons){
+  const base=nota.replace(/m|maj|min|sus|dim|aug|7|9|11|13|\(|\)|\/.*/g,'').replace(/[^A-G#b]/g,'');
+  let i=NOTAS.indexOf(base);
+  if(i===-1 && MAPA_ENARMONICO[base]) i=NOTAS.indexOf(MAPA_ENARMONICO[base]);
+  if(i===-1) return nota;
+  const novo=NOTAS[(i+semitons+120)%12];
+  return novo+nota.slice(base.length);
+}
 
 let parteEditando = null; // Para o Bottom Sheet
 
@@ -382,7 +403,10 @@ function salvarUltimoAtivo(){localStorage.setItem('draftProUltimoAtivo',Date.now
 let hiddenTime=null;
 setTimeout(() => document.body.classList.add('pronto'), 1500); // Fallback antibug (Evita tela branca)
 
-let hiddenTime=null;
+// FIX: removida a segunda declaração `let hiddenTime=null;` que havia aqui.
+// Era redeclaração da mesma variável no mesmo escopo (bug de merge) e
+// causava SyntaxError de parse — o <script> inteiro falhava silenciosamente
+// e nenhuma função do app era registrada (tela branca permanente).
 document.addEventListener('visibilitychange', ()=>{
   if(document.hidden){hiddenTime=Date.now(); salvarUltimoAtivo();}
   else{
@@ -404,6 +428,15 @@ window.addEventListener('DOMContentLoaded', ()=>{
   if(localStorage.getItem('dp_dark')==='true') toggleDarkMode(true);
   salvarUltimoAtivo(); setInterval(salvarUltimoAtivo,60000);
 });
+
+// FIX: o service worker existia no repositório mas nunca era registrado —
+// nenhum cache offline entrava em ação. Registro adicionado abaixo.
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(err => console.warn('SW não registrado:', err));
+  });
+}
+
 function updateClock(){document.getElementById('statusTime').textContent=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}
 function fazerLogin(i){igrejaLogada=i; isAdmin=false; localStorage.setItem('draftProIgreja',i); localStorage.setItem('draftProAdmin','false'); document.getElementById('login').classList.remove('active'); document.getElementById('churchName').textContent=i.toUpperCase(); showScreen('home'); salvarUltimoAtivo()}
 function pedirSenhaAdmin(){const s=prompt('Senha admin:'); if(s==='culto123'){fazerLogin('Administração'); isAdmin=true; localStorage.setItem('draftProAdmin','true');} else if(s) alert('Senha incorreta')}
@@ -489,7 +522,7 @@ function filterModalSongs(q){ if(q.length<2){document.getElementById('modalSongL
 function isChordToken(tok){
   if(!tok) return false; tok=tok.replace(/[()]/g,'').trim(); if(tok.length>12) return false;
   if(!/^[A-G][#b]?/.test(tok)) return false; if(/^[A-G][a-z]{3,}$/.test(tok)) return false;
-  return /^[A-G][#b]?(?:m|M|maj|min|dim|aug|sus|add)?[0-9#b\/()]*$/i.test(tok) \vert{}\vert{} /^[A-G][#b]?m?(?:[0-9]\vert{}maj7\vert{}m7\vert{}7M\vert{}sus2\vert{}sus4\vert{}add9\vert{}dim\vert{}aug)*(?:\/[A-G][#b]?)?$/i.test(tok);
+  return /^[A-G][#b]?(?:m|M|maj|min|dim|aug|sus|add)?[0-9#b\/()]*$/i.test(tok) || /^[A-G][#b]?m?(?:[0-9]|maj7|m7|7M|sus2|sus4|add9|dim|aug)*(?:\/[A-G][#b]?)?$/i.test(tok);
 }
 function ehLinhaDeCifra(l){
   const t=l.trim(); if(!t) return false; if(t.length>90) return false;
@@ -543,7 +576,18 @@ function abrirLeitura(musica){
 }
 function scrollToSection(i){ document.querySelectorAll('.seg').forEach(b=>b.classList.remove('active')); const btns=document.querySelectorAll('.seg'); if(btns[i]) btns[i].classList.add('active'); const el=document.querySelector(`[data-sec="${i}"]`); if(el) el.scrollIntoView({behavior:'smooth', block:'start'}); }
 function toggleSection(i){ const el=document.getElementById(`sec-${i}`); if(el) el.style.display = el.style.display==='none' ? 'block' : 'none'; }
-function transposeSong(dir){ transposeOffset+=dir; const song=musicaLeituraAtual; if(!song) return; let keyIdx=CHORDS_SHARP.indexOf(originalKey); if(keyIdx===-1) keyIdx=CHORDS_FLAT.indexOf(originalKey); let newIdx=(keyIdx+transposeOffset+120)%12; let newKey=CHORDS_SHARP[newIdx]; document.getElementById('infoKey').textContent=newKey; document.getElementById('metricKey').textContent=newKey; document.querySelectorAll('.chordline, .linha-cifra').forEach(el=>{ el.textContent=el.textContent.replace(/[A-G][#b]?(?:m|maj7|m7|7M|m6|6|9|11|13|sus2|sus4|dim|aug|add9|m9|maj9|2|4)?(?:\/[A-G][#b]?)?/g,m=>{ const base=m.replace(/m|maj|min|sus|dim|aug|7|9|11|13|\(\vert{}\)|\/.*/g,'').replace(/[^A-G#b]/g,''); let i=NOTAS.indexOf(base); if(i===-1){ const mapa={'Db':'C#','Eb':'D#','Gb':'F#','Ab':'G#','Bb':'A#'}; const c=mapa[base]; if(c) i=NOTAS.indexOf(c)} if(i===-1) return m; const novo=NOTAS[(i+dir+120)%12]; return novo+m.slice(base.length); }); }); mostrarAviso('Tom: '+newKey); }
+function transposeSong(dir){
+  transposeOffset+=dir; const song=musicaLeituraAtual; if(!song) return;
+  let keyIdx=CHORDS_SHARP.indexOf(originalKey); if(keyIdx===-1) keyIdx=CHORDS_FLAT.indexOf(originalKey);
+  let newIdx=(keyIdx+transposeOffset+120)%12; let newKey=CHORDS_SHARP[newIdx];
+  document.getElementById('infoKey').textContent=newKey; document.getElementById('metricKey').textContent=newKey;
+  // FIX: agora usa a mesma função/regex compartilhada (transporNota + REGEX_ACORDE)
+  // usada no restante do app, em vez de uma cópia solta da lógica de transposição.
+  document.querySelectorAll('.chordline, .linha-cifra').forEach(el=>{
+    el.textContent=el.textContent.replace(REGEX_ACORDE, m => transporNota(m, dir));
+  });
+  mostrarAviso('Tom: '+newKey);
+}
 function toggleAutoScroll(){ if(autoScrollInterval){ clearInterval(autoScrollInterval); autoScrollInterval=null; mostrarAviso('⏸️ Auto-scroll pausado'); } else { autoScrollInterval=setInterval(()=>window.scrollBy({top:1, behavior:'smooth'}), 80); mostrarAviso('▶️ Auto-scroll'); } }
 function stopAutoScroll(){ if(autoScrollInterval){ clearInterval(autoScrollInterval); autoScrollInterval=null; } }
 function usarLeituraNoCulto(){
@@ -590,7 +634,10 @@ function criarHtmlParte(p){
   const idParte=gerarId();
   const linhasFonte=(p.linhas&&p.linhas.length)?p.linhas:[{cifra:'',letra:'',observacao:''}];
   const linhasHtml=linhasFonte.map(criarHtmlLinha).join('');
-  return `<div class="section parte" id="${idParte}" data-codigo="${escaparHtml(p.codigo||'IN')}" data-rep="${escaparHtml(p.repeticao||'1x')}" data-din="${escaparHtml(p.intensidade||'Médio')}">
+  // FIX: faltava gravar data-obs no HTML. Sem isso, ao recarregar um culto
+  // salvo, a "observação geral da parte" voltava sempre em branco no bottom
+  // sheet — e salvar de novo apagava a observação que já estava no banco.
+  return `<div class="section parte" id="${idParte}" data-codigo="${escaparHtml(p.codigo||'IN')}" data-rep="${escaparHtml(p.repeticao||'1x')}" data-din="${escaparHtml(p.intensidade||'Médio')}" data-obs="${escaparHtml(p.observacao||'')}">
     <div class="section-head2" onclick="abrirSheetParte('${idParte}')">
       <input type="text" class="section-label nome-parte" value="${escaparHtml(p.nome||'PARTE')}" onclick="event.stopPropagation()" onfocus="this.select()">
       <div class="section-meta meta-resumo"><span class="mini">${escaparHtml(p.codigo||'IN')}</span><span class="mini">${escaparHtml(p.repeticao||'1x')}</span></div>
@@ -778,7 +825,11 @@ function toggleDarkMode(force){
   const isDark = force!==undefined ? force : document.body.classList.toggle('dark');
   if(force!==undefined && force) document.body.classList.add('dark');
   else if(force!==undefined && !force) document.body.classList.remove('dark');
-  localStorage.setItem('dp_dark', isDark); 
+  localStorage.setItem('dp_dark', isDark);
+  // FIX: faltava sincronizar visualmente o switch de Modo escuro nas Configurações
+  // (o de "Modo corrido" já fazia isso; o `.switch`/`.switch.on` também não
+  // tinha CSS nenhum antes — adicionado no <style>).
+  document.getElementById('darkSwitch')?.classList.toggle('on', isDark);
 }
 function changeChurchName(){ const n=prompt('Nome da igreja:', igrejaLogada||''); if(n){ igrejaLogada=n; localStorage.setItem('draftProIgreja',n); document.getElementById('churchName').textContent=n.toUpperCase(); document.getElementById('churchNameSetting').textContent=n; } }
 
