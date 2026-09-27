@@ -203,6 +203,7 @@ body.modo-corrido [contenteditable]:empty:before{display:none !important}
   <!-- CULTOS ATUAIS -->
   <main id="cultos" class="screen">
     <h1>Meus cultos</h1><p class="sub">Só atuais e futuros - sem lag.</p>
+    <div class="search"><span>⌕</span> <input id="searchCultos" placeholder="Buscar culto por nome..." oninput="filtrarCultosLocal(this.value)"></div>
     <div class="section-head"><h2>Próximos</h2><div style="display:flex;gap:8px"><button class="secondary small-btn" style="width:auto;padding:8px 12px" onclick="carregarCultosAtuais(true)">⟳ Atualizar</button><button class="primary" style="width:auto;padding:9px 12px;font-size:12px" onclick="novoRepertorio()">+ Novo</button></div></div>
     <div id="cultosList"><div class="empty"><div class="empty-icon">📭</div><p>Nenhum culto carregado</p><button class="primary" style="margin-top:12px;width:auto" onclick="carregarCultosAtuais(true)">🔍 Carregar cultos atuais</button></div></div>
   </main>
@@ -288,8 +289,16 @@ body.modo-corrido [contenteditable]:empty:before{display:none !important}
       <div class="field"><label>TOM</label><select id="songKey"><option>C</option><option>C#</option><option>D</option><option>D#</option><option>E</option><option>F</option><option>F#</option><option>G</option><option>G#</option><option>A</option><option>A#</option><option>B</option></select></div>
       <div class="field"><label>BPM</label><input id="songBpm" type="number" placeholder="72"></div>
       <div class="field"><label>COMPASSO</label><select id="songBeat"><option>2/4</option><option>3/4</option><option selected>4/4</option><option>6/8</option></select></div>
-      <div class="field"><label>CIFRA E LETRA (cole com cifra em cima, letra embaixo - cifra cai no campo certo)</label><textarea id="songChords" class="chord-editor" style="height:220px" placeholder="  C             G/B
-Vem meu amor..."></textarea></div>
+      <div class="field">
+        <label>CIFRA E LETRA (cole com cifra em cima, letra embaixo - cifra cai no campo certo)</label>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+          <label for="inputPdfAcervo" class="btn-acao-micro" style="cursor:pointer">📄 Importar de PDF</label>
+          <input type="file" id="inputPdfAcervo" accept="application/pdf" style="display:none" onchange="extrairPDFParaAcervo(this)">
+          <span id="statusPdfAcervo" style="font-size:11px;color:var(--muted)"></span>
+        </div>
+        <textarea id="songChords" class="chord-editor" style="height:220px" placeholder="  C             G/B
+Vem meu amor..."></textarea>
+      </div>
     </div>
     <button class="secondary" style="margin:10px 0" onclick="previewFromEditor()">👁 Pré-visualizar (modo leitura, sem criar culto)</button>
     <button class="primary" onclick="saveSongAcervo()">💾 Salvar só no acervo</button>
@@ -395,6 +404,27 @@ let parteEditando = null; // Para o Bottom Sheet
 
 function mostrarAviso(t){const e=document.createElement('div'); e.className='toast visivel'; e.textContent=t; document.body.appendChild(e); setTimeout(()=>{e.classList.remove('visivel'); setTimeout(()=>e.remove(),300)},3000)}
 function escaparHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+// FIX / MELHORIA: busca "profissional" — normaliza acento (música = musica),
+// caixa e espaços nas pontas, pra comparações de texto em toda a busca do app.
+function normalizarTexto(s){
+  return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+}
+
+// Destaca visualmente o trecho que bateu com a busca (ignorando acento/caixa
+// pra achar a posição, mas preservando o texto original na hora de mostrar).
+function destacarTermo(textoOriginal, termoBusca){
+  const texto = String(textoOriginal||'');
+  if(!termoBusca) return escaparHtml(texto);
+  const textoNorm = normalizarTexto(texto);
+  const termoNorm = normalizarTexto(termoBusca);
+  const idx = textoNorm.indexOf(termoNorm);
+  if(idx === -1 || !termoNorm) return escaparHtml(texto);
+  const antes = texto.slice(0, idx);
+  const meio = texto.slice(idx, idx + termoBusca.trim().length);
+  const depois = texto.slice(idx + termoBusca.trim().length);
+  return `${escaparHtml(antes)}<mark style="background:var(--destaque);color:var(--cifra);border-radius:3px;padding:0 2px;font-weight:800">${escaparHtml(meio)}</mark>${escaparHtml(depois)}`;
+}
 function gerarId(){return 'id-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8)}
 function closeModal(id){document.getElementById(id).classList.remove('show')}
 function showModal(id){document.getElementById(id).classList.add('show')}
@@ -478,14 +508,46 @@ async function carregarCultosAtuais(force){
     else listEl.innerHTML=`<div class="empty"><div class="empty-icon">📡</div>Sem conexão<br><button class="primary" style="width:auto;margin-top:10px" onclick="carregarCultosAtuais(true)">Tentar</button></div>`;
   }
 }
+// FIX/MELHORIA: renderização da lista de "Meus cultos" extraída pra função
+// própria, aceitando uma lista e um termo de busca opcional (pra destacar o
+// termo e diferenciar "sem cultos nenhum" de "sem resultado pra essa busca").
+// Isso permite filtrar localmente (instantâneo, sem chamada de rede) sem
+// duplicar toda a lógica de renderização nem afetar o hero da Home.
+function renderListaCultos(lista, termoBusca){
+  const listEl=document.getElementById('cultosList');
+  if(!lista.length){
+    if(termoBusca){
+      listEl.innerHTML=`<div class="empty"><div class="empty-icon">🔍</div>Nenhum culto encontrado para "${escaparHtml(termoBusca)}"</div>`;
+    } else {
+      listEl.innerHTML=`<div class="empty"><div class="empty-icon">📭</div>Nenhum culto atual<br><button class="primary" style="width:auto;margin-top:10px" onclick="novoRepertorio()">+ Novo culto</button></div>`;
+    }
+    return;
+  }
+  listEl.innerHTML=lista.slice(0,20).map(c=>`<div class="cult-card" onclick="carregarRepertorioDaNuvem('${c.id}')"><div class="card-top"><div><div class="card-title">${destacarTermo(c.titulo,termoBusca)}</div><div class="card-meta">🗓️ ${escaparHtml(c.data||'')} • ${destacarTermo(c.subtitulo||'',termoBusca)}</div></div><span class="badge">${escaparHtml(c.igreja||'')}</span></div><div class="card-foot"><span>Atualizado</span><div style="display:flex;gap:6px"><span style="color:var(--brand);font-weight:800">Abrir →</span><button onclick="event.stopPropagation(); confirmarExcluirCulto('${c.id}','${escaparHtml(c.titulo).replace(/'/g,"\\'")}')" style="background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:4px 8px">🗑️</button></div></div></div>`).join('');
+}
+
+// Busca local instantânea em "Meus cultos" — os dados já estão carregados em
+// memória (cacheCultosFuturos), então filtrar não precisa de nenhuma chamada
+// de rede: resultado aparece a cada tecla, sem debounce nem loading.
+function filtrarCultosLocal(q){
+  const termo=normalizarTexto(q);
+  const filtrados = termo
+    ? cacheCultosFuturos.filter(c => normalizarTexto(c.titulo).includes(termo) || normalizarTexto(c.subtitulo||'').includes(termo) || normalizarTexto(c.igreja||'').includes(termo))
+    : cacheCultosFuturos;
+  renderListaCultos(filtrados, q.trim());
+}
+
 function renderCultosAtuais(){
-  const listEl=document.getElementById('cultosList'); const recentEl=document.getElementById('recentCultos'); const heroName=document.getElementById('nextCultoName'); const heroMeta=document.getElementById('nextCultoMeta'); const btn=document.getElementById('openCultoBtn');
+  const recentEl=document.getElementById('recentCultos'); const heroName=document.getElementById('nextCultoName'); const heroMeta=document.getElementById('nextCultoMeta'); const btn=document.getElementById('openCultoBtn');
+  const termoAtual=document.getElementById('searchCultos')?.value.trim() || '';
   if(!cacheCultosFuturos.length){
-    listEl.innerHTML=`<div class="empty"><div class="empty-icon">📭</div>Nenhum culto atual<br><button class="primary" style="width:auto;margin-top:10px" onclick="novoRepertorio()">+ Novo culto</button></div>`;
+    renderListaCultos([], termoAtual);
     recentEl.innerHTML=`<div class="empty">Nenhum culto ainda</div>`; heroName.textContent='Nenhum culto agendado'; heroMeta.innerHTML=''; btn.style.display='none'; return;
   }
+  // Se já havia um termo de busca digitado (ex: veio de uma atualização em
+  // segundo plano), reaplica o filtro em vez de sempre mostrar tudo.
+  if(termoAtual){ filtrarCultosLocal(termoAtual); } else { renderListaCultos(cacheCultosFuturos, ''); }
   const proximos=cacheCultosFuturos.slice(0,20);
-  listEl.innerHTML=proximos.map(c=>`<div class="cult-card" onclick="carregarRepertorioDaNuvem('${c.id}')"><div class="card-top"><div><div class="card-title">${escaparHtml(c.titulo)}</div><div class="card-meta">🗓️ ${escaparHtml(c.data||'')} • ${escaparHtml(c.subtitulo||'')}</div></div><span class="badge">${escaparHtml(c.igreja||'')}</span></div><div class="card-foot"><span>Atualizado</span><div style="display:flex;gap:6px"><span style="color:var(--brand);font-weight:800">Abrir →</span><button onclick="event.stopPropagation(); confirmarExcluirCulto('${c.id}','${escaparHtml(c.titulo).replace(/'/g,"\\'")}')" style="background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:4px 8px">🗑️</button></div></div></div>`).join('');
   recentEl.innerHTML=proximos.slice(0,3).map(c=>`<div class="cult-card" onclick="carregarRepertorioDaNuvem('${c.id}')"><div class="card-top"><div><div class="card-title">${escaparHtml(c.titulo)}</div><div class="card-meta">${escaparHtml(c.data||'')}</div></div><span class="badge">${c.igreja||''}</span></div></div>`).join('');
   const prox=proximos[0]; heroName.textContent=prox.titulo; heroMeta.innerHTML=`<div class="hero-stat">📅 ${escaparHtml(prox.data||'')}</div><div class="hero-stat">⛪ ${escaparHtml(prox.igreja||'')}</div>`; btn.style.display='block'; currentCultoId=prox.id;
 }
@@ -499,7 +561,7 @@ async function carregarHistorico(){
     const params=new URLSearchParams({acao:'listarHistorico', busca:nome, inicio, fim, igreja, _:Date.now()});
     const resp=await fetch(`${APPS_SCRIPT_URL}?${params}`); const rc=await resp.json(); const hist=rc.historico||[];
     if(!hist.length){listEl.innerHTML=`<div class="empty"><div class="empty-icon">🔍</div>Nenhum culto encontrado</div>`; return;}
-    listEl.innerHTML=hist.map(c=>`<div class="cult-card" onclick="carregarRepertorioDaNuvem('${c.id}')"><div class="card-top"><div><div class="card-title">${escaparHtml(c.titulo)}</div><div class="card-meta">🗓️ ${escaparHtml(c.data||'')} • ${escaparHtml(c.igreja||'')} • ${escaparHtml(c.subtitulo||'')}</div></div><span class="badge">HIST</span></div><div class="card-foot"><span></span><button onclick="event.stopPropagation(); confirmarExcluirCulto('${c.id}','${escaparHtml(c.titulo).replace(/'/g,"\\'")}')" style="background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:4px 8px">🗑️</button></div></div>`).join('');
+    listEl.innerHTML=hist.map(c=>`<div class="cult-card" onclick="carregarRepertorioDaNuvem('${c.id}')"><div class="card-top"><div><div class="card-title">${destacarTermo(c.titulo,nome)}</div><div class="card-meta">🗓️ ${escaparHtml(c.data||'')} • ${escaparHtml(c.igreja||'')} • ${destacarTermo(c.subtitulo||'',nome)}</div></div><span class="badge">HIST</span></div><div class="card-foot"><span></span><button onclick="event.stopPropagation(); confirmarExcluirCulto('${c.id}','${escaparHtml(c.titulo).replace(/'/g,"\\'")}')" style="background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:4px 8px">🗑️</button></div></div>`).join('');
   }catch(e){listEl.innerHTML=`<div class="empty">Erro ao buscar</div>`;}
 }
 function confirmarExcluirCulto(id,titulo){
@@ -517,16 +579,33 @@ async function buscarAcervo(q){
   const cont=document.getElementById('songsList'); const countEl=document.getElementById('songCount');
   if(q.length<3){ cont.innerHTML=`<div class="empty"><div class="empty-icon">📚</div>Digite pelo menos 3 letras para buscar. Ex: bat, ous, vei</div>`; countEl.textContent='0 músicas'; return;}
   cont.innerHTML=`<div class="empty"><div class="empty-icon">🔍</div>Buscando "${escaparHtml(q)}"...</div>`;
-    try{
+  // FIX: token de requisição — numa busca "conforme digita", uma resposta de
+  // rede lenta de uma letra anterior podia chegar DEPOIS da resposta da busca
+  // mais nova e sobrescrever a tela com resultado desatualizado. Só a última
+  // busca disparada tem permissão de renderizar.
+  const minhaBusca = ++ultimaBuscaAcervo;
+  try{
     const resp=await fetch(`${APPS_SCRIPT_URL}?acao=buscarBiblioteca&q=${encodeURIComponent(q)}&igreja=${encodeURIComponent(igrejaLogada)}&_=${Date.now()}`);
-    const rc=await resp.json(); const lista=rc.musicas||[]; bibliotecaCache=lista;
+    const rc=await resp.json();
+    if(minhaBusca !== ultimaBuscaAcervo) return; // já existe uma busca mais nova em andamento
+    const lista=rc.musicas||[]; bibliotecaCache=lista;
     countEl.textContent=`${lista.length} músicas`;
     if(!lista.length){cont.innerHTML=`<div class="empty">Nenhuma para "${escaparHtml(q)}"</div>`; return;}
-    cont.innerHTML=lista.map(m=>`<div class="song-card" onclick="visualizarMusicaAcervo('${m.id}')"><div class="card-top"><div><div class="card-title">${escaparHtml(m.titulo)}</div><div class="card-meta">${escaparHtml(m.autores||'')}</div></div><span class="badge badge-cifra">${escaparHtml(m.tom||'C')}</span></div><div class="card-foot"><span>Acervo</span><span style="color:var(--brand);font-weight:800">👁️ Ver (sem criar culto) →</span></div></div>`).join('');
-  }catch(e){cont.innerHTML=`<div class="empty">Erro na busca</div>`;}
+    cont.innerHTML=lista.map(m=>`<div class="song-card" onclick="visualizarMusicaAcervo('${m.id}')"><div class="card-top"><div><div class="card-title">${destacarTermo(m.titulo,q)}</div><div class="card-meta">${destacarTermo(m.autores||'',q)}</div></div><span class="badge badge-cifra">${escaparHtml(m.tom||'C')}</span></div><div class="card-foot"><span>Acervo</span><span style="color:var(--brand);font-weight:800">👁️ Ver (sem criar culto) →</span></div></div>`).join('');
+  }catch(e){ if(minhaBusca===ultimaBuscaAcervo) cont.innerHTML=`<div class="empty">Erro na busca</div>`; }
 }
+let ultimaBuscaAcervo=0;
+let ultimaBuscaModal=0;
 function setAcervoFilter(t,btn){ document.querySelectorAll('#acervo .filter').forEach(b=>b.classList.remove('selected')); if(btn) btn.classList.add('selected'); if(t==='all') buscarAcervo('a'); }
-function filterModalSongs(q){ if(q.length<2){document.getElementById('modalSongList').innerHTML=''; return;} fetch(`${APPS_SCRIPT_URL}?acao=buscarBiblioteca&q=${encodeURIComponent(q)}&_=${Date.now()}`).then(r=>r.json()).then(rc=>{ const lista=rc.musicas||[]; document.getElementById('modalSongList').innerHTML=lista.map(m=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;border:1px solid var(--line);border-radius:10px;margin-bottom:6px"><span><strong>${escaparHtml(m.titulo)}</strong> <small>${escaparHtml(m.tom||'')}</small></span><button class="primary" style="width:auto;padding:6px 12px" onclick="adicionarMusicaAcervoNoCulto('${m.id}')">＋ Usar</button></div>`).join(''); }); }
+function filterModalSongs(q){
+  if(q.length<2){document.getElementById('modalSongList').innerHTML=''; return;}
+  const minhaBusca=++ultimaBuscaModal;
+  fetch(`${APPS_SCRIPT_URL}?acao=buscarBiblioteca&q=${encodeURIComponent(q)}&_=${Date.now()}`).then(r=>r.json()).then(rc=>{
+    if(minhaBusca!==ultimaBuscaModal) return;
+    const lista=rc.musicas||[];
+    document.getElementById('modalSongList').innerHTML=lista.map(m=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;border:1px solid var(--line);border-radius:10px;margin-bottom:6px"><span><strong>${destacarTermo(m.titulo,q)}</strong> <small>${escaparHtml(m.tom||'')}</small></span><button class="primary" style="width:auto;padding:6px 12px" onclick="adicionarMusicaAcervoNoCulto('${m.id}')">＋ Usar</button></div>`).join('');
+  });
+}
 
 function isChordToken(tok){
   if(!tok) return false; tok=tok.replace(/[()]/g,'').trim(); if(tok.length>12) return false;
@@ -772,7 +851,7 @@ async function saveCulto(){
 }
 
 // --- EDITOR MÚSICA - SÓ ACERVO ---
-function abrirModalNovoAcervo(){ showScreen('editor-musica'); document.getElementById('songEditorTitle').textContent='Nova música no acervo'; document.getElementById('songName').value=''; document.getElementById('songAuthor').value=''; document.getElementById('songKey').value='C'; document.getElementById('songBpm').value=''; document.getElementById('songChords').value=''; editingSongId=null; }
+function abrirModalNovoAcervo(){ showScreen('editor-musica'); document.getElementById('songEditorTitle').textContent='Nova música no acervo'; document.getElementById('songName').value=''; document.getElementById('songAuthor').value=''; document.getElementById('songKey').value='C'; document.getElementById('songBpm').value=''; document.getElementById('songChords').value=''; document.getElementById('statusPdfAcervo').textContent=''; document.getElementById('inputPdfAcervo').value=''; editingSongId=null; }
 function previewFromEditor(){
   const titulo=document.getElementById('songName').value||'Prévia'; const autores=document.getElementById('songAuthor').value; const tom=document.getElementById('songKey').value; const bpm=document.getElementById('songBpm').value; const beat=document.getElementById('songBeat').value; const pares=parseCifraTexto(document.getElementById('songChords').value);
   const partes=[{nome:'MÚSICA',codigo:'IN',repeticao:'1x', linhas:pares}];
@@ -808,10 +887,11 @@ function processarImportTexto(){
   closeModal('importModal'); abrirLeitura({titulo, autores:'', tom:'C', bpm:'', beat:'4/4', partes:[{nome:'MÚSICA',codigo:'IN',repeticao:'1x', linhas:pares}]});
   mostrarAviso('✅ Separado automaticamente!');
 }
-async function extrairPDF(input){
-  const arquivo=input.files[0]; if(!arquivo) return;
-  document.getElementById('nomePdfSpan').textContent=arquivo.name+' — extraindo...';
-  try{
+// FIX: leitura de PDF extraída pra uma função só, compartilhada entre o
+// modal "Importar" (aba PDF) e o botão "📄 Importar de PDF" direto na tela
+// de Nova música — antes só existia um caminho (o modal), e criar uma
+// música do zero forçava o usuário a colar texto manualmente.
+async function lerTextoDePDF(arquivo){
     const buffer=await arquivo.arrayBuffer(); const pdf=await pdfjsLib.getDocument({data:buffer}).promise; let texto='';
 
     // FIX: antes, todos os trechos de uma mesma linha eram unidos com um
@@ -855,11 +935,37 @@ async function extrairPDF(input){
         texto += linha.replace(/\s+$/,'') + '\n';
       });
     }
+    return texto;
+}
 
+// Wrapper usado pelo modal "Importar" (aba PDF) — mantém o comportamento de sempre.
+async function extrairPDF(input){
+  const arquivo=input.files[0]; if(!arquivo) return;
+  document.getElementById('nomePdfSpan').textContent=arquivo.name+' — extraindo...';
+  try{
+    const texto=await lerTextoDePDF(arquivo);
     document.getElementById('importText').value=texto; switchImportTab('texto'); mostrarAviso('PDF lido! Espaçamento reconstruído — revise antes de separar.');
     document.getElementById('nomePdfSpan').textContent='Pronto!';
   }catch(e){document.getElementById('nomePdfSpan').textContent='Erro ao ler PDF. Tente colar o texto.'}
 }
+
+// Wrapper novo: usado direto na tela de "Nova música no acervo", preenchendo
+// o campo de cifra/letra sem passar pelo modal de importação.
+async function extrairPDFParaAcervo(input){
+  const arquivo=input.files[0]; if(!arquivo) return;
+  const status=document.getElementById('statusPdfAcervo');
+  status.textContent=arquivo.name+' — extraindo...';
+  try{
+    const texto=await lerTextoDePDF(arquivo);
+    document.getElementById('songChords').value=texto;
+    status.textContent='✅ PDF importado — revise antes de salvar';
+    mostrarAviso('PDF lido! Revise o texto antes de salvar.');
+  }catch(e){
+    status.textContent='❌ Erro ao ler PDF';
+    mostrarAviso('Erro ao ler PDF. Tente colar o texto manualmente.');
+  }
+}
+
 async function importarCifraClubLink(){
   const url=document.getElementById('cifraUrl').value.trim(); const st=document.getElementById('cifraStatus');
   if(!url.includes('cifraclub.com')){ mostrarAviso('Link inválido'); return; }
