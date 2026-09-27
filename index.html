@@ -422,7 +422,16 @@ document.addEventListener('visibilitychange', ()=>{
 window.addEventListener('pageshow', e=>{ if(e.persisted) location.reload(); });
 window.addEventListener('DOMContentLoaded', ()=>{
   const ultimo=parseInt(localStorage.getItem('draftProUltimoAtivo')||'0'); if(ultimo && Date.now()-ultimo>12*60*60*1000){localStorage.removeItem('draftProIgreja');}
-  const s=localStorage.getItem('draftProIgreja'); if(s){igrejaLogada=s; isAdmin=localStorage.getItem('draftProAdmin')==='true'; document.getElementById('login').classList.remove('active'); showScreen('home'); document.getElementById('churchName').textContent=s.toUpperCase();} 
+  const s=localStorage.getItem('draftProIgreja');
+  if(s){
+    igrejaLogada=s; isAdmin=localStorage.getItem('draftProAdmin')==='true'; document.getElementById('login').classList.remove('active'); showScreen('home'); document.getElementById('churchName').textContent=s.toUpperCase();
+  } else {
+    // FIX: sem sessão salva, showScreen('login') nunca era chamado — e como
+    // a barra inferior só é escondida DENTRO de showScreen(), ela ficava
+    // visível "grudada" por baixo da tela de login. Chamando explicitamente
+    // aqui, os dois caminhos (com e sem sessão) ficam consistentes.
+    showScreen('login');
+  }
   document.body.classList.add('pronto'); updateClock(); setInterval(updateClock,60000);
   if(localStorage.getItem('modoCorrido')==='true') alternarModoCorrido(true);
   if(localStorage.getItem('dp_dark')==='true') toggleDarkMode(true);
@@ -804,12 +813,50 @@ async function extrairPDF(input){
   document.getElementById('nomePdfSpan').textContent=arquivo.name+' — extraindo...';
   try{
     const buffer=await arquivo.arrayBuffer(); const pdf=await pdfjsLib.getDocument({data:buffer}).promise; let texto='';
+
+    // FIX: antes, todos os trechos de uma mesma linha eram unidos com um
+    // único espaço fixo (.join(' ')), jogando fora a posição horizontal
+    // (coordenada X) de cada trecho — que é exatamente o que faz o acorde
+    // cair alinhado em cima da sílaba certa. Agora reconstruímos essa
+    // posição usando a largura média de caractere da página, simulando
+    // a grade "monoespaçada" que o parser de cifra/letra já espera.
     for(let i=1;i<=pdf.numPages;i++){
-      const pag=await pdf.getPage(i); const cont=await pag.getTextContent(); const porY={}; 
-      cont.items.forEach(it=>{const y=Math.round(it.transform[5]); if(!porY[y]) porY[y]=[]; porY[y].push(it.str)}); 
-      Object.keys(porY).sort((a,b)=>b-a).forEach(y=>{texto+=porY[y].join(' ')+'\n'})
+      const pag=await pdf.getPage(i);
+      const cont=await pag.getTextContent();
+      const itens=cont.items.filter(it=>it.str && it.str.length);
+      if(!itens.length) continue;
+
+      // Largura média de caractere nesta página (cifras costumam usar fonte
+      // monoespaçada ou próxima disso — é uma aproximação, não perfeita,
+      // mas muito mais fiel que ignorar o X por completo).
+      let somaLargura=0, somaChars=0;
+      itens.forEach(it=>{ if(it.width && it.str.trim().length){ somaLargura+=it.width; somaChars+=it.str.length; } });
+      const larguraChar = somaChars ? (somaLargura/somaChars) : 6; // fallback de segurança
+
+      // Agrupa por linha (Y arredondado, com tolerância pra variação de sub-pixel)
+      const chavesY=[]; const porY={};
+      itens.forEach(it=>{
+        const y=Math.round(it.transform[5]);
+        let chave=chavesY.find(k=>Math.abs(k-y)<=2);
+        if(chave===undefined){ chave=y; chavesY.push(chave); }
+        if(!porY[chave]) porY[chave]=[];
+        porY[chave].push(it);
+      });
+
+      chavesY.sort((a,b)=>b-a).forEach(y=>{
+        const itensLinha=porY[y].slice().sort((a,b)=>a.transform[4]-b.transform[4]); // ordena por X (esquerda -> direita)
+        let linha=''; let colunaAtual=0;
+        itensLinha.forEach((it,idx)=>{
+          const colunaAlvo=Math.max(0, Math.round(it.transform[4]/larguraChar));
+          const espacos = idx===0 ? colunaAlvo : Math.max(1, colunaAlvo-colunaAtual);
+          linha += ' '.repeat(espacos) + it.str;
+          colunaAtual = colunaAlvo + it.str.length;
+        });
+        texto += linha.replace(/\s+$/,'') + '\n';
+      });
     }
-    document.getElementById('importText').value=texto; switchImportTab('texto'); mostrarAviso('PDF lido! Revise o texto e clique no botão de separar.');
+
+    document.getElementById('importText').value=texto; switchImportTab('texto'); mostrarAviso('PDF lido! Espaçamento reconstruído — revise antes de separar.');
     document.getElementById('nomePdfSpan').textContent='Pronto!';
   }catch(e){document.getElementById('nomePdfSpan').textContent='Erro ao ler PDF. Tente colar o texto.'}
 }
