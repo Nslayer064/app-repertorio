@@ -1,4 +1,5 @@
-// Troque esse número a CADA deploy novo no GitHub — é o gatilho da atualização.
+// Troque esse número a CADA deploy que remover ou renomear arquivos estáticos.
+// Para mudanças de HTML/JS/CSS não é necessário: eles já são buscados da rede primeiro.
 const CACHE_VERSION = 'draftpro-v9';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 
@@ -29,6 +30,21 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
 
+  // Correção 1: nunca mexe em requisições que não sejam GET (POST/PUT/DELETE
+  // pro Apps Script, por exemplo) — a Cache API só aceita GET, e tentar
+  // cachear isso falha silenciosamente e suja o console. Deixa passar direto.
+  if (request.method !== 'GET') {
+    return;
+  }
+
+  // Correção 2: chamadas ao Apps Script (dados dinâmicos) vão sempre direto
+  // pra rede, sem passar pela lógica de cache — evita mostrar dado/erro
+  // desatualizado antes de "piscar" pra versão nova.
+  if (request.url.includes('script.google.com')) {
+    event.respondWith(fetch(request));
+    return;
+  }
+
   // HTML e JS do app: SEMPRE tenta a rede primeiro, para garantir a versão mais nova.
   // Só usa o cache se estiver offline.
   if (request.mode === 'navigate' || request.destination === 'document' || request.destination === 'script') {
@@ -36,8 +52,12 @@ self.addEventListener('fetch', (event) => {
       fetch(request)
         .then((resposta) => {
           const clone = resposta.clone();
-          caches.open(STATIC_CACHE).then((cache) => cache.put(request, clone));
-          return resposta;
+          // Correção 3: encadeado no return, para o service worker não ser
+          // encerrado antes do cache.put terminar de gravar.
+          return caches.open(STATIC_CACHE).then((cache) => {
+            cache.put(request, clone);
+            return resposta;
+          });
         })
         .catch(() => caches.match(request))
     );
@@ -47,10 +67,15 @@ self.addEventListener('fetch', (event) => {
   // Demais arquivos (imagens, ícones): cache primeiro, atualizando em segundo plano.
   event.respondWith(
     caches.match(request).then((emCache) => {
-      const buscaRede = fetch(request).then((resposta) => {
-        caches.open(STATIC_CACHE).then((cache) => cache.put(request, resposta.clone()));
-        return resposta;
-      }).catch(() => emCache);
+      const buscaRede = fetch(request)
+        .then((resposta) => {
+          const clone = resposta.clone();
+          return caches.open(STATIC_CACHE).then((cache) => {
+            cache.put(request, clone);
+            return resposta;
+          });
+        })
+        .catch(() => emCache);
       return emCache || buscaRede;
     })
   );
