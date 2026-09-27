@@ -1,6 +1,6 @@
 // Troque esse número a CADA deploy que remover ou renomear arquivos estáticos.
 // Para mudanças de HTML/JS/CSS não é necessário: eles já são buscados da rede primeiro.
-const CACHE_VERSION = 'draftpro-v11';
+const CACHE_VERSION = 'draftpro-v12';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 
 // Arquivos estáticos que raramente mudam (ícones, fontes locais etc).
