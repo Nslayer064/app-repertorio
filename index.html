@@ -380,16 +380,21 @@ function showModal(id){document.getElementById(id).classList.add('show')}
 function logout(){localStorage.removeItem('draftProIgreja');localStorage.removeItem('draftProAdmin');localStorage.removeItem('draftProUltimoAtivo');location.reload()}
 function salvarUltimoAtivo(){localStorage.setItem('draftProUltimoAtivo',Date.now().toString())}
 let hiddenTime=null;
+setTimeout(() => document.body.classList.add('pronto'), 1500); // Fallback antibug (Evita tela branca)
+
+let hiddenTime=null;
 document.addEventListener('visibilitychange', ()=>{
   if(document.hidden){hiddenTime=Date.now(); salvarUltimoAtivo();}
   else{
     const agora=Date.now(); const ficou=(hiddenTime?agora-hiddenTime:0); const ultimo=parseInt(localStorage.getItem('draftProUltimoAtivo')||'0');
-    if(ficou>30*60*1000 || (agora-ultimo)>2*60*60*1000){
-      if(['editor-culto','execution'].includes(currentScreen)){ showScreen('home'); mostrarAviso('Atualizando...'); carregarCultosAtuais(true); }
+    if(ficou>45*60*1000 || (agora-ultimo)>2*60*60*1000){ // 45 minutos inativo -> Tela de Login
+      logout(); return;
     }
+    if(ficou>15*60*1000 && ['editor-culto','execution'].includes(currentScreen)){ showScreen('home'); mostrarAviso('Atualizando...'); carregarCultosAtuais(true); }
     salvarUltimoAtivo();
   }
 });
+
 window.addEventListener('pageshow', e=>{ if(e.persisted) location.reload(); });
 window.addEventListener('DOMContentLoaded', ()=>{
   const ultimo=parseInt(localStorage.getItem('draftProUltimoAtivo')||'0'); if(ultimo && Date.now()-ultimo>12*60*60*1000){localStorage.removeItem('draftProIgreja');}
@@ -410,9 +415,11 @@ function showScreen(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active', n.dataset.target===id));
+  document.querySelector('.bottom').style.display = id === 'login' ? 'none' : 'grid'; // Esconde menu no login
   currentScreen=id;
   window.scrollTo({top:0,behavior:'smooth'});
 }
+
 function goBackFromExecution(){ stopAutoScroll(); if(editingCultoId) showScreen('editor-culto'); else showScreen('acervo'); }
 
 // --- CULTOS ATUAIS ---
@@ -468,8 +475,8 @@ async function buscarAcervo(q){
   const cont=document.getElementById('songsList'); const countEl=document.getElementById('songCount');
   if(q.length<3){ cont.innerHTML=`<div class="empty"><div class="empty-icon">📚</div>Digite pelo menos 3 letras para buscar. Ex: bat, ous, vei</div>`; countEl.textContent='0 músicas'; return;}
   cont.innerHTML=`<div class="empty"><div class="empty-icon">🔍</div>Buscando "${escaparHtml(q)}"...</div>`;
-  try{
-    const resp=await fetch(`${APPS_SCRIPT_URL}?acao=buscarBiblioteca&q=${encodeURIComponent(q)}&_=${Date.now()}`);
+    try{
+    const resp=await fetch(`${APPS_SCRIPT_URL}?acao=buscarBiblioteca&q=${encodeURIComponent(q)}&igreja=${encodeURIComponent(igrejaLogada)}&_=${Date.now()}`);
     const rc=await resp.json(); const lista=rc.musicas||[]; bibliotecaCache=lista;
     countEl.textContent=`${lista.length} músicas`;
     if(!lista.length){cont.innerHTML=`<div class="empty">Nenhuma para "${escaparHtml(q)}"</div>`; return;}
@@ -719,14 +726,13 @@ function saveSongAcervo(){
   const titulo=document.getElementById('songName').value.trim(); if(!titulo){ mostrarAviso('Título obrigatório'); return; }
   const pares=parseCifraTexto(document.getElementById('songChords').value);
   const dados={id:gerarId(), titulo, autores:document.getElementById('songAuthor').value, tom:document.getElementById('songKey').value, bpm:document.getElementById('songBpm').value, beat:document.getElementById('songBeat').value, partes:[{nome:'MÚSICA COMPLETA',codigo:'IN',repeticao:'1x', linhas:pares}]};
-  // Salva só no acervo
-  if(isAdmin){
-    bibliotecaCache.push(dados); localStorage.setItem('cache_biblioteca',JSON.stringify(bibliotecaCache)); mostrarAviso(`✅ "${titulo}" salvo no acervo`);
-    fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({acao:'salvarMusica',...dados})}).catch(()=>{});
-  } else {
-    pendentesCache.push({...dados, status:'pendente', solicitadoPor:igrejaLogada, data:new Date().toISOString()}); localStorage.setItem('pendentesAcervo',JSON.stringify(pendentesCache)); mostrarAviso(`Enviado para validação`);
-    fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({acao:'solicitarValidacao',...dados})}).catch(()=>{});
-  }
+  
+  bibliotecaCache.push(dados); localStorage.setItem('cache_biblioteca',JSON.stringify(bibliotecaCache)); 
+  mostrarAviso(`✅ "${titulo}" salvo no acervo da igreja`);
+  
+  // Salva diretamente enviando a Igreja como dona (fim da fila de validação)
+  fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({acao:'salvarMusica', igreja:igrejaLogada, ...dados})}).catch(()=>{});
+  
   showScreen('acervo');
 }
 
