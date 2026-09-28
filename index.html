@@ -153,6 +153,18 @@ h1{font-size:28px;line-height:1.1;margin:2px 0 7px;letter-spacing:-1px;font-fami
 .switch i{transition:transform .2s}
 .switch.on i{transform:translateX(19px)}
 
+/* MELHORIA: MODO PALCO EM TELA CHEIA — a classe .modo-fullscreen só é
+   aplicada pelo JS (atualizarModoTelaCheia) quando modo-corrido está ativo
+   E a pessoa está em execution/editor-culto. Nunca depende só de
+   .modo-corrido sozinho, que também é usado (globalmente) como preferência
+   padrão — evitando sumir com a navegação do app inteiro por engano. */
+body.modo-fullscreen .status,
+body.modo-fullscreen .topbar,
+body.modo-fullscreen .bottom{ display:none !important; }
+body.modo-fullscreen .app{ padding-bottom:0; }
+body.modo-fullscreen .exec-head{ padding:10px 16px 10px; }
+body.modo-fullscreen .exec-sub{ display:none; } /* autor+tom fica redundante já dentro da cifra */
+
 /* MODO CORRIDO / VISUALIZAÇÃO */
 body.modo-corrido .chordline{white-space:pre; font-size:16px}
 body.modo-corrido .section{border:none;box-shadow:none;background:transparent;margin:0 0 18px}
@@ -246,7 +258,9 @@ body.modo-corrido [contenteditable]:empty:before{display:none !important}
         <button class="compact-btn" onclick="transposeSong(-1)">♭ -1</button>
         <button class="compact-btn" onclick="transposeSong(1)">♯ +1</button>
         <button class="compact-btn" id="btn-corrido-exec" onclick="alternarModoCorrido()">📄 Corrido</button>
+        <button class="compact-btn" onclick="ajustarVelocidadeAutoScroll(-1)">🐢</button>
         <button class="compact-btn" onclick="toggleAutoScroll()">📜 Auto</button>
+        <button class="compact-btn" onclick="ajustarVelocidadeAutoScroll(1)">🐇</button>
       </div>
     </div>
     <div class="structure-wrap"><div class="structure" id="songSectionsNav"></div></div>
@@ -289,15 +303,27 @@ body.modo-corrido [contenteditable]:empty:before{display:none !important}
       <div class="field"><label>TOM</label><select id="songKey"><option>C</option><option>C#</option><option>D</option><option>D#</option><option>E</option><option>F</option><option>F#</option><option>G</option><option>G#</option><option>A</option><option>A#</option><option>B</option></select></div>
       <div class="field"><label>BPM</label><input id="songBpm" type="number" placeholder="72"></div>
       <div class="field"><label>COMPASSO</label><select id="songBeat"><option>2/4</option><option>3/4</option><option selected>4/4</option><option>6/8</option></select></div>
-      <div class="field">
+      <div class="field" id="campoTextoSimplesAcervo">
         <label>CIFRA E LETRA (cole com cifra em cima, letra embaixo - cifra cai no campo certo)</label>
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+        <div id="botoesImportacaoAcervo" style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
           <label for="inputPdfAcervo" class="btn-acao-micro" style="cursor:pointer">📄 Importar de PDF</label>
           <input type="file" id="inputPdfAcervo" accept="application/pdf" style="display:none" onchange="extrairPDFParaAcervo(this)">
+          <button class="btn-acao-micro" onclick="ativarEdicaoEmBlocosAcervo()">✂️ Editar em blocos (partes, observações)</button>
           <span id="statusPdfAcervo" style="font-size:11px;color:var(--muted)"></span>
         </div>
         <textarea id="songChords" class="chord-editor" style="height:220px" placeholder="  C             G/B
 Vem meu amor..."></textarea>
+      </div>
+      <!-- MELHORIA: editor granular (mesmo motor do culto) restaurado aqui:
+           quebrar parte, duplicar/remover linha, observação por linha e por
+           parte via bottom sheet. Reaproveita as mesmas funções já usadas em
+           editor-culto (criarHtmlParte, adicionarParteNaMusica, etc.) — por
+           isso precisa da classe "musica-wrapper" no container abaixo. -->
+      <div id="blocosAcervoContainer" class="musica-wrapper" style="display:none">
+        <div class="partes-container"></div>
+        <div class="botoes-rodape-parte" style="margin-top:12px;justify-content:center">
+          <button class="btn-acao-micro" style="padding:8px 14px" onclick="adicionarParteNaMusica(this)">＋ Adicionar Parte</button>
+        </div>
       </div>
     </div>
     <button class="secondary" style="margin:10px 0" onclick="previewFromEditor()">👁 Pré-visualizar (modo leitura, sem criar culto)</button>
@@ -468,6 +494,12 @@ window.addEventListener('DOMContentLoaded', ()=>{
   salvarUltimoAtivo(); setInterval(salvarUltimoAtivo,60000);
 });
 
+// MELHORIA: qualquer digitação (inclusive nas divs contenteditable de
+// cifra/letra/observação) marca a edição como "suja", cobrindo a maioria dos
+// casos com um listener só, por delegação.
+document.getElementById('editor-culto').addEventListener('input', ()=> edicaoSuja=true);
+document.getElementById('editor-musica').addEventListener('input', ()=> edicaoSuja=true);
+
 // FIX: o service worker existia no repositório mas nunca era registrado —
 // nenhum cache offline entrava em ação. Registro adicionado abaixo.
 if('serviceWorker' in navigator){
@@ -483,14 +515,58 @@ function carregarDemo(){
   const demo={titulo:'Batendo a porta (DEMO)', autores:'Morada', tom:'C#m', bpm:'72', beat:'4/4', partes:[{nome:'VERSO',codigo:'V1',repeticao:'1x',linhas:[{cifra:'C#m7           B2',letra:'Nós não pararemos de clamar',obs:'Marcação'},{cifra:'     F#m       A9',letra:'Até que o reino venha',obs:''}]}]};
   abrirLeitura(demo);
 }
+// MELHORIA: aviso antes de perder edição não salva. Uma única variável
+// "suja" — mais simples que duas separadas — porque só um editor por vez
+// fica ativo (editor-culto OU editor-musica), nunca os dois ao mesmo tempo.
+let edicaoSuja=false;
 function showScreen(id){
+  const telasComEdicao=['editor-culto','editor-musica'];
+  if(telasComEdicao.includes(currentScreen) && id!==currentScreen && edicaoSuja){
+    const confirmado=confirm('Você tem alterações não salvas. Sair mesmo assim?');
+    if(!confirmado) return;
+  }
+  edicaoSuja=false; // ao confirmar a saída (ou se não havia nada sujo), zera pro próximo editor começar limpo
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active', n.dataset.target===id));
   document.querySelector('.bottom').style.display = id === 'login' ? 'none' : 'grid'; // Esconde menu no login
   currentScreen=id;
+  atualizarModoTelaCheia(); // MELHORIA: modo palco em tela cheia (ver função abaixo)
   window.scrollTo({top:0,behavior:'smooth'});
 }
+
+// MELHORIA: "Modo palco" de verdade — some com a barra de status, o topo do
+// app e a navegação inferior, deixando só a cifra/letra na tela. Só ativa
+// quando o Modo Corrido está ligado E a pessoa está numa tela de leitura
+// (execução ou editor de culto) — NUNCA global, pra nunca esconder a
+// navegação do app inteiro sem querer em outras telas (Home, Acervo etc.).
+function atualizarModoTelaCheia(){
+  const telasDeLeitura = ['execution','editor-culto'];
+  const deveSerTelaCheia = document.body.classList.contains('modo-corrido') && telasDeLeitura.includes(currentScreen);
+  document.body.classList.toggle('modo-fullscreen', deveSerTelaCheia);
+  // MELHORIA: além de esconder os elementos do app, tenta também a tela cheia
+  // real do dispositivo (esconde barra do Android/navegador). Best-effort: o
+  // navegador só permite isso a partir de um toque direto do usuário — se
+  // recusar (ex: troca de tela automática), falha em silêncio e o modo palco
+  // continua funcionando normalmente só com os elementos escondidos.
+  try{
+    if(deveSerTelaCheia){
+      if(document.documentElement.requestFullscreen && !document.fullscreenElement){
+        document.documentElement.requestFullscreen().catch(()=>{});
+      }
+    } else if(document.fullscreenElement && document.exitFullscreen){
+      document.exitFullscreen().catch(()=>{});
+    }
+  }catch(e){}
+}
+
+// Se a pessoa sair da tela cheia pelo próprio sistema (gesto de voltar, deslizar
+// a barra), desliga também o Modo Corrido pra app e dispositivo ficarem coerentes.
+document.addEventListener('fullscreenchange', ()=>{
+  if(!document.fullscreenElement && document.body.classList.contains('modo-fullscreen')){
+    alternarModoCorrido(false);
+  }
+});
 
 function goBackFromExecution(){ stopAutoScroll(); if(editingCultoId) showScreen('editor-culto'); else showScreen('acervo'); }
 
@@ -603,7 +679,7 @@ function filterModalSongs(q){
   fetch(`${APPS_SCRIPT_URL}?acao=buscarBiblioteca&q=${encodeURIComponent(q)}&_=${Date.now()}`).then(r=>r.json()).then(rc=>{
     if(minhaBusca!==ultimaBuscaModal) return;
     const lista=rc.musicas||[];
-    document.getElementById('modalSongList').innerHTML=lista.map(m=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;border:1px solid var(--line);border-radius:10px;margin-bottom:6px"><span><strong>${destacarTermo(m.titulo,q)}</strong> <small>${escaparHtml(m.tom||'')}</small></span><button class="primary" style="width:auto;padding:6px 12px" onclick="adicionarMusicaAcervoNoCulto('${m.id}')">＋ Usar</button></div>`).join('');
+    document.getElementById('modalSongList').innerHTML=lista.map(m=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;border:1px solid var(--line);border-radius:10px;margin-bottom:6px"><span><strong>${destacarTermo(m.titulo,q)}</strong> <small>${escaparHtml(m.tom||'')}</small></span><button class="primary" style="width:auto;padding:6px 12px" onclick="adicionarMusicaAcervoNoCulto('${m.id}','${escaparHtml(m.titulo).replace(/'/g,"\\'")}','${escaparHtml(m.tom||'C')}')">＋ Usar</button></div>`).join('');
   });
 }
 
@@ -676,13 +752,33 @@ function transposeSong(dir){
   });
   mostrarAviso('Tom: '+newKey);
 }
-function toggleAutoScroll(){ if(autoScrollInterval){ clearInterval(autoScrollInterval); autoScrollInterval=null; mostrarAviso('⏸️ Auto-scroll pausado'); } else { autoScrollInterval=setInterval(()=>window.scrollBy({top:1, behavior:'smooth'}), 80); mostrarAviso('▶️ Auto-scroll'); } }
+// MELHORIA: velocidade do auto-scroll ajustável (antes era fixa em 80ms/1px,
+// sem jeito de deixar mais lento pra uma balada ou mais rápido pra um louvor
+// agitado). Nível 1 (mais lento) a 7 (mais rápido), salvo entre sessões.
+const VELOCIDADES_AUTOSCROLL=[160,130,100,80,60,45,30]; // ms por passo — índice 3 = comportamento de antes
+let velocidadeAutoScroll = parseInt(localStorage.getItem('velocidadeAutoScroll')||'3');
+
+function iniciarIntervaloAutoScroll(){
+  if(autoScrollInterval) clearInterval(autoScrollInterval);
+  autoScrollInterval=setInterval(()=>window.scrollBy({top:1, behavior:'smooth'}), VELOCIDADES_AUTOSCROLL[velocidadeAutoScroll]);
+}
+function toggleAutoScroll(){
+  if(autoScrollInterval){ clearInterval(autoScrollInterval); autoScrollInterval=null; mostrarAviso('⏸️ Auto-scroll pausado'); }
+  else { iniciarIntervaloAutoScroll(); mostrarAviso('▶️ Auto-scroll'); }
+}
+function ajustarVelocidadeAutoScroll(direcao){
+  velocidadeAutoScroll=Math.max(0,Math.min(VELOCIDADES_AUTOSCROLL.length-1, velocidadeAutoScroll+direcao));
+  localStorage.setItem('velocidadeAutoScroll', velocidadeAutoScroll);
+  mostrarAviso('Velocidade: '+(velocidadeAutoScroll+1)+'/'+VELOCIDADES_AUTOSCROLL.length);
+  if(autoScrollInterval) iniciarIntervaloAutoScroll(); // já rolando: aplica na hora, sem precisar pausar/religar
+}
 function stopAutoScroll(){ if(autoScrollInterval){ clearInterval(autoScrollInterval); autoScrollInterval=null; } }
 function usarLeituraNoCulto(){
   if(!musicaLeituraAtual) return;
   if(!editingCultoId && !document.getElementById('cultoSongsList').children.length){ novoRepertorio(); }
   showScreen('editor-culto');
   adicionarMusicaNoCultoEditor(musicaLeituraAtual);
+  edicaoSuja=true; // ação do usuário (não é carga de culto salvo)
   mostrarAviso('Música adicionada no culto atual');
 }
 function alternarModoCorrido(force){
@@ -692,6 +788,7 @@ function alternarModoCorrido(force){
   localStorage.setItem('modoCorrido', ativo?'true':'false');
   document.querySelectorAll('#btn-corrido-exec, #btn-corrido-culto').forEach(b=>{ if(b){ b.classList.toggle('ativo',ativo); b.textContent=ativo?'🧩 Separado':'📄 Corrido'; } });
   document.getElementById('corridoSwitch')?.classList.toggle('on',ativo);
+  atualizarModoTelaCheia(); // MELHORIA: reflete tela cheia na hora, sem precisar trocar de tela
   mostrarAviso(ativo?'📄 Modo corrido / Somente Leitura':'🧩 Modo de edição (Arrastar/Quebrar)');
 }
 function ajustarZoom(d){ tamanhoFonteAtual=Math.max(0.7,Math.min(1.3,tamanhoFonteAtual+(d*0.06))); document.documentElement.style.setProperty('--t',tamanhoFonteAtual+'rem'); }
@@ -757,7 +854,7 @@ function adicionarMusicaNoCultoEditor(m){
   wrapper.innerHTML=`
     <div style="display:flex;justify-content:space-between;align-items:flex-end;margin:24px 0 8px;border-bottom:2px solid var(--line);padding-bottom:6px">
       <input type="text" class="musica-titulo" value="${escaparHtml(m.titulo||'Nova Música')}" style="font-family:var(--fd);font-size:22px;font-weight:900;border:none;background:transparent;outline:none;width:100%;color:var(--brand)">
-      <button class="btn-del-sec" onclick="this.closest('.musica-wrapper').remove()" style="background:var(--surface-2);color:var(--danger);border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-weight:700">✕ Excluir</button>
+      <button class="btn-del-sec" onclick="this.closest('.musica-wrapper').remove(); edicaoSuja=true;" style="background:var(--surface-2);color:var(--danger);border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-weight:700">✕ Excluir</button>
     </div>
     <div class="partes-container">${partesHtml}</div>
     <div class="botoes-rodape-parte" style="margin-bottom:20px;justify-content:center"><button class="btn-acao-micro" style="padding:8px 14px" onclick="adicionarParteNaMusica(this)">＋ Adicionar Parte</button></div>
@@ -767,12 +864,22 @@ function adicionarMusicaNoCultoEditor(m){
 }
 
 function openAddSongToCultoModal(){ document.getElementById('modalSearch').value=''; document.getElementById('modalSongList').innerHTML='<div class="empty">Digite 3 letras para buscar</div>'; showModal('addSongModal'); }
-function adicionarMusicaAcervoNoCulto(id){
-  const base=bibliotecaCache.find(x=>x.id===id); if(!base) return;
+// FIX CRÍTICO: antes, essa função só funcionava se a música já estivesse em
+// `bibliotecaCache` — mas a busca de DENTRO do culto (filterModalSongs) nunca
+// preenchia esse cache. Resultado: `base` vinha undefined e a função saía na
+// primeira linha (`if(!base) return`), sem tentar buscar nada, sem erro
+// visível — parecia a tela travada. Agora ela sempre tenta buscar a música
+// pela rede, e só usa título/tom de fallback (passados pelo próprio botão)
+// se a rede falhar — nunca depende de um cache que pode não existir.
+function adicionarMusicaAcervoNoCulto(id, tituloFallback, tomFallback){
+  const preencherFallback=()=>({titulo:tituloFallback||'Música', autores:'', tom:tomFallback||'C', partes:[{nome:'VERSO 1',codigo:'V1',repeticao:'1x', linhas:[]}]});
   fetch(`${APPS_SCRIPT_URL}?acao=carregarMusica&id=${encodeURIComponent(id)}&_=${Date.now()}`).then(r=>r.json()).then(j=>{
-    const m=j.status==='sucesso'&&j.partes ? j : {...base, partes:[{nome:'VERSO 1',codigo:'V1',repeticao:'1x', linhas:[]}]};
-    adicionarMusicaNoCultoEditor(m); closeModal('addSongModal'); mostrarAviso('Adicionada no culto');
-  }).catch(()=>{ adicionarMusicaNoCultoEditor(base); closeModal('addSongModal'); });
+    const m = (j.status==='sucesso' && j.partes) ? j : preencherFallback();
+    adicionarMusicaNoCultoEditor(m); edicaoSuja=true; closeModal('addSongModal'); mostrarAviso('Adicionada no culto');
+  }).catch(()=>{
+    adicionarMusicaNoCultoEditor(preencherFallback()); edicaoSuja=true; closeModal('addSongModal');
+    mostrarAviso('Adicionada com dados básicos — sem conexão pra buscar detalhes');
+  });
 }
 
 // DRAG E DROP E AÇÕES DE LINHA
@@ -789,16 +896,18 @@ function getDragAfterElement(container,y){
   return els.reduce((closest,child)=>{const box=child.getBoundingClientRect(); const offset=y-box.top-box.height/2; if(offset<0&&offset>closest.offset){return {offset,element:child}}else return closest},{offset:Number.NEGATIVE_INFINITY}).element;
 }
 
-function removerLinha(btn){btn.closest('.linha-grupo').remove();}
-function duplicarLinha(btn){const g=btn.closest('.linha-grupo'); const c=g.cloneNode(true); c.dataset.linhaId=gerarId(); g.after(c);}
+function removerLinha(btn){btn.closest('.linha-grupo').remove(); edicaoSuja=true;}
+function duplicarLinha(btn){const g=btn.closest('.linha-grupo'); const c=g.cloneNode(true); c.dataset.linhaId=gerarId(); g.after(c); edicaoSuja=true;}
 function adicionarLinhaNaParte(btn){
   const chords=btn.closest('.chords'); const w=document.createElement('div'); w.innerHTML=criarHtmlLinha({cifra:'',letra:'',observacao:''});
   const n=w.firstElementChild; chords.insertBefore(n, btn.closest('.botoes-rodape-parte')); ativarDragLinhas(chords); n.querySelector('.linha-cifra').focus();
+  edicaoSuja=true;
 }
 function adicionarParteNaMusica(btn){
   const wrapper=btn.closest('.musica-wrapper'); const pCont=wrapper.querySelector('.partes-container');
   const w=document.createElement('div'); w.innerHTML=criarHtmlParte({nome:'NOVA PARTE'}); const n=w.firstElementChild;
   pCont.appendChild(n); ativarDragLinhas(n);
+  edicaoSuja=true;
 }
 function quebrarParteAqui(btn){
   const linha=btn.closest('.linha-grupo'); const parte=btn.closest('.parte'); const wrapper=btn.closest('.musica-wrapper');
@@ -809,6 +918,7 @@ function quebrarParteAqui(btn){
   nova.querySelectorAll('.linha-grupo').forEach(l=>l.remove()); const rodape=nova.querySelector('.botoes-rodape-parte');
   mover.forEach(l=>nova.querySelector('.chords').insertBefore(l,rodape));
   parte.after(nova); ativarDragLinhas(nova);
+  edicaoSuja=true;
 }
 
 // BOTTOM SHEET DE CONFIGURAÇÃO DE PARTE
@@ -830,6 +940,7 @@ function salvarSheetParte(){
   parteEditando.dataset.din = document.getElementById('sheet-dinamica').value;
   parteEditando.dataset.obs = document.getElementById('sheet-obs').value;
   parteEditando.querySelector('.meta-resumo').innerHTML = `<span class="mini">${escaparHtml(parteEditando.dataset.codigo)}</span><span class="mini">${escaparHtml(parteEditando.dataset.rep)}</span>`;
+  edicaoSuja=true;
   fecharSheetParte();
 }
 
@@ -847,20 +958,74 @@ async function saveCulto(){
     return obj;
   });
   const dados={acao:'salvarRepertorio', id:editingCultoId, igreja:igrejaLogada, titulo:nome, data:document.getElementById('cultoDate').value, subtitulo:document.getElementById('cultoNotes').value, musicas};
-  try{ const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify(dados)}); const j=await r.json(); if(j.status==='sucesso'){ editingCultoId=j.id; mostrarAviso('💾 Culto salvo!'); cacheCultosFuturos=[]; showScreen('cultos'); carregarCultosAtuais(true); } }catch(e){ mostrarAviso('Salvo local - sem conexão'); }
+  try{ const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify(dados)}); const j=await r.json(); if(j.status==='sucesso'){ editingCultoId=j.id; edicaoSuja=false; mostrarAviso('💾 Culto salvo!'); cacheCultosFuturos=[]; showScreen('cultos'); carregarCultosAtuais(true); } }catch(e){ mostrarAviso('Salvo local - sem conexão'); }
 }
 
 // --- EDITOR MÚSICA - SÓ ACERVO ---
-function abrirModalNovoAcervo(){ showScreen('editor-musica'); document.getElementById('songEditorTitle').textContent='Nova música no acervo'; document.getElementById('songName').value=''; document.getElementById('songAuthor').value=''; document.getElementById('songKey').value='C'; document.getElementById('songBpm').value=''; document.getElementById('songChords').value=''; document.getElementById('statusPdfAcervo').textContent=''; document.getElementById('inputPdfAcervo').value=''; editingSongId=null; }
+let modoBlocoAcervo=false; // MELHORIA: controla se o editor granular (blocos) está ativo nesta tela
+
+function abrirModalNovoAcervo(){
+  showScreen('editor-musica'); document.getElementById('songEditorTitle').textContent='Nova música no acervo';
+  document.getElementById('songName').value=''; document.getElementById('songAuthor').value=''; document.getElementById('songKey').value='C';
+  document.getElementById('songBpm').value=''; document.getElementById('songChords').value='';
+  document.getElementById('statusPdfAcervo').textContent=''; document.getElementById('inputPdfAcervo').value='';
+  desativarEdicaoEmBlocosAcervo(); // MELHORIA: garante que a tela sempre abre no modo texto simples
+  editingSongId=null;
+}
+
+// MELHORIA: liga o editor granular a partir do texto já colado/importado na textarea.
+function ativarEdicaoEmBlocosAcervo(){
+  const texto=document.getElementById('songChords').value;
+  if(!texto.trim()){ mostrarAviso('Cole ou importe uma cifra primeiro'); return; }
+  const pares=parseCifraTexto(texto);
+  ativarEdicaoEmBlocosAcervoComPartes([{nome:'MÚSICA COMPLETA', codigo:'IN', repeticao:'1x', intensidade:'Médio', observacao:'', linhas: pares.length?pares:[{cifra:'',letra:'',observacao:''}]}]);
+  mostrarAviso('Modo de edição em blocos ativado — quebre partes, adicione observações');
+}
+
+// MELHORIA: liga o editor granular já com partes prontas (usado ao editar uma música existente).
+function ativarEdicaoEmBlocosAcervoComPartes(partes){
+  const container=document.getElementById('blocosAcervoContainer');
+  const partesContainer=container.querySelector('.partes-container');
+  partesContainer.innerHTML=partes.map(criarHtmlParte).join('');
+  ativarDragLinhas(partesContainer);
+  document.getElementById('campoTextoSimplesAcervo').style.display='none';
+  container.style.display='block';
+  modoBlocoAcervo=true;
+}
+
+function desativarEdicaoEmBlocosAcervo(){
+  const container=document.getElementById('blocosAcervoContainer');
+  container.style.display='none';
+  container.querySelector('.partes-container').innerHTML='';
+  document.getElementById('campoTextoSimplesAcervo').style.display='block';
+  modoBlocoAcervo=false;
+}
+
+// MELHORIA: extrai partes/linhas do editor granular (mesma lógica do saveCulto, só que pra uma música só).
+function extrairPartesDoBlocoAcervo(){
+  const partes=[];
+  document.querySelectorAll('#blocosAcervoContainer .parte').forEach(p=>{
+    const pObj={ nome:p.querySelector('.nome-parte').value, codigo:p.dataset.codigo, repeticao:p.dataset.rep, intensidade:p.dataset.din, observacao:p.dataset.obs, linhas:[] };
+    p.querySelectorAll('.linha-grupo').forEach(l=>{
+      pObj.linhas.push({ cifra:l.querySelector('.linha-cifra').innerText, letra:l.querySelector('.linha-letra').innerText, observacao:l.querySelector('.linha-obs').innerText });
+    });
+    partes.push(pObj);
+  });
+  return partes;
+}
+
 function previewFromEditor(){
-  const titulo=document.getElementById('songName').value||'Prévia'; const autores=document.getElementById('songAuthor').value; const tom=document.getElementById('songKey').value; const bpm=document.getElementById('songBpm').value; const beat=document.getElementById('songBeat').value; const pares=parseCifraTexto(document.getElementById('songChords').value);
-  const partes=[{nome:'MÚSICA',codigo:'IN',repeticao:'1x', linhas:pares}];
+  const titulo=document.getElementById('songName').value||'Prévia'; const autores=document.getElementById('songAuthor').value; const tom=document.getElementById('songKey').value; const bpm=document.getElementById('songBpm').value; const beat=document.getElementById('songBeat').value;
+  const partes = modoBlocoAcervo ? extrairPartesDoBlocoAcervo() : [{nome:'MÚSICA',codigo:'IN',repeticao:'1x', linhas:parseCifraTexto(document.getElementById('songChords').value)}];
   abrirLeitura({titulo, autores, tom, bpm, beat, partes});
 }
 function saveSongAcervo(){
   const titulo=document.getElementById('songName').value.trim(); if(!titulo){ mostrarAviso('Título obrigatório'); return; }
-  const pares=parseCifraTexto(document.getElementById('songChords').value);
-  const dados={id:gerarId(), titulo, autores:document.getElementById('songAuthor').value, tom:document.getElementById('songKey').value, bpm:document.getElementById('songBpm').value, beat:document.getElementById('songBeat').value, partes:[{nome:'MÚSICA COMPLETA',codigo:'IN',repeticao:'1x', linhas:pares}]};
+  const partes = modoBlocoAcervo ? extrairPartesDoBlocoAcervo() : [{nome:'MÚSICA COMPLETA',codigo:'IN',repeticao:'1x', linhas:parseCifraTexto(document.getElementById('songChords').value)}];
+  // FIX: usa editingSongId quando estamos editando uma música já existente do
+  // acervo — antes sempre gerava um id novo, então "editar" na prática criava
+  // uma música duplicada em vez de atualizar a original.
+  const dados={id:editingSongId||gerarId(), titulo, autores:document.getElementById('songAuthor').value, tom:document.getElementById('songKey').value, bpm:document.getElementById('songBpm').value, beat:document.getElementById('songBeat').value, partes};
   
   bibliotecaCache.push(dados); localStorage.setItem('cache_biblioteca',JSON.stringify(bibliotecaCache)); 
   mostrarAviso(`✅ "${titulo}" salvo no acervo da igreja`);
@@ -868,6 +1033,7 @@ function saveSongAcervo(){
   // Salva diretamente enviando a Igreja como dona (fim da fila de validação)
   fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify({acao:'salvarMusica', igreja:igrejaLogada, ...dados})}).catch(()=>{});
   
+  edicaoSuja=false; // acabou de salvar: sair agora não deve pedir confirmação
   showScreen('acervo');
 }
 
@@ -973,7 +1139,27 @@ async function importarCifraClubLink(){
   try{ const resp=await fetch(`${APPS_SCRIPT_URL}?acao=importarCifraClub&url=${encodeURIComponent(url)}&_=${Date.now()}`); const dados=await resp.json(); if(dados.status==='sucesso'){ closeModal('importModal'); abrirLeitura({titulo:dados.titulo, autores:dados.autores, tom:dados.tom, bpm:'', beat:'4/4', partes:dados.partes}); mostrarAviso('Importado! Cifra no campo certo'); } else st.textContent='❌ '+(dados.mensagem||'Erro'); }catch(e){ st.textContent='❌ Erro de conexão'; }
 }
 
-function editCurrentSong(){ showScreen('editor-musica'); document.getElementById('songName').value=musicaLeituraAtual?.titulo||''; document.getElementById('songAuthor').value=musicaLeituraAtual?.autores||''; document.getElementById('songKey').value=musicaLeituraAtual?.tom||'C'; document.getElementById('songBpm').value=musicaLeituraAtual?.bpm||''; }
+// FIX: antes essa função só preenchia título/autor/tom/bpm — a cifra e as
+// observações inteiras se perdiam ao clicar em "Edição" a partir da leitura.
+// Agora, se a música tem partes (veio do acervo), já abre direto no editor
+// em blocos com tudo que já existia, e marca editingSongId pra "Salvar"
+// atualizar a música original em vez de criar uma cópia duplicada.
+function editCurrentSong(){
+  showScreen('editor-musica');
+  document.getElementById('songEditorTitle').textContent='Editar música';
+  document.getElementById('songName').value=musicaLeituraAtual?.titulo||'';
+  document.getElementById('songAuthor').value=musicaLeituraAtual?.autores||'';
+  document.getElementById('songKey').value=musicaLeituraAtual?.tom||'C';
+  document.getElementById('songBpm').value=musicaLeituraAtual?.bpm||'';
+  document.getElementById('songBeat').value=musicaLeituraAtual?.beat||'4/4'; // FIX: compasso também se perdia ao editar
+  document.getElementById('songChords').value='';
+  document.getElementById('statusPdfAcervo').textContent=''; document.getElementById('inputPdfAcervo').value='';
+  desativarEdicaoEmBlocosAcervo();
+  editingSongId = musicaLeituraAtual?.id || null;
+  if(musicaLeituraAtual?.partes?.length){
+    ativarEdicaoEmBlocosAcervoComPartes(musicaLeituraAtual.partes);
+  }
+}
 function toggleDarkMode(force){ 
   const isDark = force!==undefined ? force : document.body.classList.toggle('dark');
   if(force!==undefined && force) document.body.classList.add('dark');
