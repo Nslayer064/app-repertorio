@@ -549,6 +549,14 @@ window.addEventListener('DOMContentLoaded', ()=>{
   salvarUltimoAtivo(); setInterval(salvarUltimoAtivo,60000);
 });
 
+// TRAVA ANTI-ACIDENTE (F5 / Fechar aba)
+window.addEventListener('beforeunload', (e) => {
+  if(edicaoSuja){
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+
 // MELHORIA: qualquer digitação (inclusive nas divs contenteditable de
 // cifra/letra/observação) marca a edição como "suja", cobrindo a maioria dos
 // casos com um listener só, por delegação.
@@ -900,7 +908,10 @@ function criarHtmlParte(p){
     </div>
     <div class="chords" style="padding:12px 16px">
       ${linhasHtml}
-      <div class="botoes-rodape-parte"><button class="btn-acao-micro" onclick="adicionarLinhaNaParte(this)">＋ Linha</button></div>
+      <div class="botoes-rodape-parte">
+        <button class="btn-acao-micro" onclick="adicionarLinhaNaParte(this)">＋ Linha</button>
+        <button class="btn-acao-micro" onclick="duplicarParteCompleta(this)">⧉ Duplicar Parte</button>
+      </div>
     </div>
   </div>`;
 }
@@ -925,9 +936,12 @@ function adicionarMusicaNoCultoEditor(m){
   
   const partesHtml=(m.partes||[{nome:'PARTE',linhas:[{cifra:'',letra:'',observacao:''}]}]).map(criarHtmlParte).join('');
   wrapper.innerHTML=`
-    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin:24px 0 8px;border-bottom:2px solid var(--line);padding-bottom:6px">
-      <input type="text" class="musica-titulo" value="${escaparHtml(m.titulo||'Nova Música')}" style="font-family:var(--fd);font-size:22px;font-weight:900;border:none;background:transparent;outline:none;width:100%;color:var(--brand)">
-      <button class="btn-del-sec" onclick="this.closest('.musica-wrapper').remove(); edicaoSuja=true; atualizarIndiceCulto();" style="background:var(--surface-2);color:var(--danger);border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-weight:700">✕ Excluir</button>
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin:24px 0 8px;border-bottom:2px solid var(--line);padding-bottom:6px; flex-wrap:wrap; gap:8px">
+      <input type="text" class="musica-titulo" value="${escaparHtml(m.titulo||'Nova Música')}" style="font-family:var(--fd);font-size:22px;font-weight:900;border:none;background:transparent;outline:none;flex:1;min-width:200px;color:var(--brand)">
+      <div style="display:flex;gap:6px">
+         <button class="btn-del-sec" onclick="salvarAlteracoesNoAcervo(this, '${m.id}')" style="background:var(--green-soft);color:#168348;border:1px solid #168348;border-radius:8px;padding:4px 8px;font-weight:700">💾 Atualizar Acervo</button>
+         <button class="btn-del-sec" onclick="this.closest('.musica-wrapper').remove(); edicaoSuja=true; atualizarIndiceCulto();" style="background:var(--surface-2);color:var(--danger);border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-weight:700">✕</button>
+      </div>
     </div>
     <div class="partes-container">${partesHtml}</div>
     <div class="botoes-rodape-parte" style="margin-bottom:20px;justify-content:center"><button class="btn-acao-micro" style="padding:8px 14px" onclick="adicionarParteNaMusica(this)">＋ Adicionar Parte</button></div>
@@ -1002,6 +1016,23 @@ function removerLinha(btn){
   grupo.remove(); edicaoSuja=true;
 }
 function duplicarLinha(btn){const g=btn.closest('.linha-grupo'); const c=g.cloneNode(true); c.dataset.linhaId=gerarId(); g.after(c); edicaoSuja=true;}
+
+// CLONAGEM LIMPA DE PARTE
+function duplicarParteCompleta(btn) {
+  const parteAtual = btn.closest('.parte');
+  const parteClonada = parteAtual.cloneNode(true);
+  parteClonada.id = gerarId();
+  
+  // Limpa RGs de cada linha para não "congelar" a edição das cópias
+  parteClonada.querySelectorAll('.linha-grupo').forEach(linha => {
+    linha.dataset.linhaId = gerarId();
+  });
+  
+  parteAtual.after(parteClonada);
+  ativarDragLinhas(parteClonada);
+  edicaoSuja = true;
+  mostrarAviso('Parte duplicada (pronta para edição)');
+}
 function adicionarLinhaNaParte(btn){
   const chords=btn.closest('.chords'); const w=document.createElement('div'); w.innerHTML=criarHtmlLinha({cifra:'',letra:'',observacao:''});
   const n=w.firstElementChild; chords.insertBefore(n, btn.closest('.botoes-rodape-parte')); ativarDragLinhas(chords); n.querySelector('.linha-cifra').focus();
@@ -1065,6 +1096,37 @@ async function saveCulto(){
   try{ const r=await fetch(APPS_SCRIPT_URL,{method:'POST',body:JSON.stringify(dados)}); const j=await r.json(); if(j.status==='sucesso'){ editingCultoId=j.id; edicaoSuja=false; mostrarAviso('💾 Culto salvo!'); cacheCultosFuturos=[]; showScreen('cultos'); carregarCultosAtuais(true); } }catch(e){ mostrarAviso('Salvo local - sem conexão'); }
 }
 
+// SALVAR MÚSICA DIRETO DO CULTO PRO ACERVO
+function salvarAlteracoesNoAcervo(btn, originalId) {
+  const wrapper = btn.closest('.musica-wrapper');
+  if (!wrapper) return;
+  const titulo = wrapper.querySelector('.musica-titulo').value.trim();
+  if (!titulo) { mostrarAviso('Música sem título não pode ir pro Acervo'); return; }
+  
+  // Extrai as partes do HTML
+  const partes = [];
+  wrapper.querySelectorAll('.parte').forEach(p=>{
+    const pObj = { nome: p.querySelector('.nome-parte').value, codigo: p.dataset.codigo, repeticao: p.dataset.rep, intensidade: p.dataset.din, observacao: p.dataset.obs, linhas: [] };
+    p.querySelectorAll('.linha-grupo').forEach(l=>{
+      pObj.linhas.push({ cifra: l.querySelector('.linha-cifra').innerText, letra: l.querySelector('.linha-letra').innerText, observacao: l.querySelector('.linha-obs').innerText });
+    });
+    partes.push(pObj);
+  });
+  
+  const id = originalId && !originalId.startsWith('id-') ? originalId : gerarId(); // Mantém o ID original se veio do acervo
+  const dados = { id, titulo, autores: '', tom: wrapper.dataset.tom || 'C', bpm: wrapper.dataset.bpm || '', beat: wrapper.dataset.beat || '4/4', partes };
+  
+  btn.textContent = '⏳ ...';
+  fetch(APPS_SCRIPT_URL, { method: 'POST', body: JSON.stringify({ acao: 'salvarMusica', igreja: igrejaLogada, ...dados }) })
+    .then(r => r.json())
+    .then(j => {
+      if (j.status === 'sucesso') { mostrarAviso(`✅ "${titulo}" atualizada no Acervo!`); }
+      else { mostrarAviso('❌ Falha ao salvar no acervo.'); }
+    })
+    .catch(() => mostrarAviso('Sem conexão. Tente novamente.'))
+    .finally(() => btn.textContent = '💾 Atualizar Acervo');
+}
+
 // --- EDITOR MÚSICA - SÓ ACERVO ---
 let modoBlocoAcervo=false; // MELHORIA: controla se o editor granular (blocos) está ativo nesta tela
 
@@ -1092,6 +1154,10 @@ function ativarEdicaoEmBlocosAcervoComPartes(partes){
   const partesContainer=container.querySelector('.partes-container');
   partesContainer.innerHTML=partes.map(criarHtmlParte).join('');
   ativarDragLinhas(partesContainer);
+  
+  // Destrava os contenteditables forçando o foco (Bug do Chrome Mobile)
+  partesContainer.querySelectorAll('[contenteditable]').forEach(el => el.contentEditable = "true");
+  
   document.getElementById('campoTextoSimplesAcervo').style.display='none';
   container.style.display='block';
   modoBlocoAcervo=true;
@@ -1228,7 +1294,11 @@ async function extrairPDFParaAcervo(input){
   try{
     const texto=await lerTextoDePDF(arquivo);
     document.getElementById('songChords').value=texto;
-    status.textContent='✅ PDF importado — revise antes de salvar';
+    
+    // Força o modo de texto cru (Desativa blocos caso estivessem ligados)
+    desativarEdicaoEmBlocosAcervo();
+    
+    status.textContent='✅ PDF extraído em Modo Corrido (Limpo)';
     mostrarAviso('PDF lido! Revise o texto antes de salvar.');
   }catch(e){
     status.textContent='❌ Erro ao ler PDF';
