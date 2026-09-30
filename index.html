@@ -196,7 +196,19 @@ body.modo-corrido [contenteditable]:empty:before{display:none !important}
   .structure-wrap, .mode-toggle, .backrow,
   #btnUsarNoCulto, .exec-actions,
   .linha-acoes, .linha-handle, .botoes-rodape-parte, .btn-del-sec,
-  #botoesImportacaoAcervo, .btn-imprimir-app { display:none !important; }
+  #botoesImportacaoAcervo, .btn-imprimir-app,
+  .toast { display:none !important; }
+  /* FIX: o .toast (aviso "Modo corrido...", "Tom: X" etc.) é position:fixed —
+     se estivesse na tela no momento de imprimir (ex: acabou de trocar de
+     modo), o Chrome REPETIA esse texto em TODA página impressa, poluindo o
+     PDF inteiro com um aviso que não tinha nada a ver com a música. */
+
+  /* FIX: na tela de execução (música única), o título/autor/tom aparecia
+     duas vezes — uma no cabeçalho fixo da tela, outra dentro do cartão de
+     informações logo abaixo. O cartão já é o cabeçalho de impressão certo,
+     então escondemos o cabeçalho de tela inteiro só nessa tela. */
+  #execution .exec-head { display:none !important; }
+  .metric { background:none !important; border:1px solid #999 !important; }
 
   body, .app { background:#fff !important; color:#000 !important; padding-bottom:0 !important; }
   .app { width:100% !important; max-width:100% !important; }
