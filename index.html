@@ -177,6 +177,47 @@ body.modo-corrido .linha-grupo{border:none!important;background:transparent!impo
 body.modo-corrido .linha-acoes, body.modo-corrido .linha-handle, body.modo-corrido .botoes-rodape-parte, body.modo-corrido .btn-del-sec{display:none !important}
 body.modo-corrido [contenteditable]{pointer-events:none;border:none !important;background:transparent !important}
 body.modo-corrido [contenteditable]:empty:before{display:none !important}
+
+/* ============================================================
+   MELHORIA: IMPRESSÃO / EXPORTAR PDF
+   window.print() com essas regras — no Android/Chrome, o diálogo
+   de impressão tem "Salvar como PDF" nativo, então isso já entrega
+   PDF sem precisar de nenhuma biblioteca extra. Funciona tanto pra
+   uma música só (tela de execução) quanto pro repertório inteiro
+   (tela de edição de culto) — cada @media print abaixo cobre um
+   dos dois contextos, e só o que estiver ativo naquele momento é
+   impresso (telas .screen que não são .active já ficam display:none
+   o tempo todo, inclusive na impressão).
+   ============================================================ */
+@media print {
+  /* Nunca imprime chrome do app, modais, ou controles de edição —
+     só o conteúdo de leitura (cifra/letra) importa no papel. */
+  .status, .topbar, .bottom, .modal, .sheet, .sheet-fundo,
+  .structure-wrap, .mode-toggle, .backrow,
+  #btnUsarNoCulto, .exec-actions,
+  .linha-acoes, .linha-handle, .botoes-rodape-parte, .btn-del-sec,
+  #botoesImportacaoAcervo, .btn-imprimir-app { display:none !important; }
+
+  body, .app { background:#fff !important; color:#000 !important; padding-bottom:0 !important; }
+  .app { width:100% !important; max-width:100% !important; }
+
+  /* Cabeçalhos de tela (execução e culto) ficam simples, sem sticky/sombra */
+  .exec-head { position:static !important; box-shadow:none !important; border-bottom:2px solid #000 !important; padding:0 0 10px 0 !important; }
+  .exec-title { color:#000 !important; }
+  .exec-head input { border:none !important; background:transparent !important; color:#000 !important; padding:2px 0 !important; }
+
+  .song-info, .section, .parte { box-shadow:none !important; border:1px solid #999 !important; page-break-inside:avoid; }
+  .section-label, .info-title, .musica-titulo { color:#000 !important; }
+  .chordline, .linha-cifra { color:#000 !important; font-weight:800 !important; }
+  .lyricline, .linha-letra { color:#000 !important; }
+  .linha-obs { color:#333 !important; background:none !important; border:none !important; }
+  .instrument { background:none !important; border:1px dashed #999 !important; color:#000 !important; }
+  .badge, .badge-cifra, .mini { border:1px solid #999 !important; background:none !important; color:#000 !important; }
+
+  /* No repertório: cada música começa numa página nova, pra facilitar
+     trocar de folha física entre uma música e outra durante o culto. */
+  .musica-wrapper:not(:first-of-type) { page-break-before: always; }
+}
 </style>
 </head>
 <body>
@@ -268,6 +309,7 @@ body.modo-corrido [contenteditable]:empty:before{display:none !important}
       <div class="info-top"><div><div class="info-title" id="infoTitle">—</div><div class="info-author" id="infoAuthor">—</div></div><span class="badge badge-cifra" id="infoKey">C</span></div>
       <div class="metrics"><div class="metric"><b id="metricKey">C</b><span>TOM</span></div><div class="metric"><b id="metricBpm">--</b><span>BPM</span></div><div class="metric"><b id="metricBeat">4/4</b><span>COMPASSO</span></div></div>
       <button class="primary" style="margin-top:14px" id="btnUsarNoCulto" onclick="usarLeituraNoCulto()">＋ Usar neste culto</button>
+      <button class="secondary btn-imprimir-app" style="margin-top:8px" onclick="window.print()">🖨️ Imprimir / Salvar em PDF</button>
     </div>
     <div id="chordsContent"></div>
   </main>
@@ -283,6 +325,7 @@ body.modo-corrido [contenteditable]:empty:before{display:none !important}
         <button class="compact-btn" onclick="ajustarZoom(1)">A+</button>
         <button class="compact-btn" id="btn-corrido-culto" onclick="alternarModoCorrido()">📄 Corrido</button>
         <button class="primary" style="width:auto;padding:8px 14px" onclick="saveCulto()">💾 Salvar culto</button>
+        <button class="compact-btn btn-imprimir-app" onclick="window.print()">🖨️ Imprimir</button>
       </div>
     </div>
     <div class="structure-wrap"><div class="structure" id="cultoSectionsNav"></div></div>
@@ -497,7 +540,10 @@ window.addEventListener('DOMContentLoaded', ()=>{
 // MELHORIA: qualquer digitação (inclusive nas divs contenteditable de
 // cifra/letra/observação) marca a edição como "suja", cobrindo a maioria dos
 // casos com um listener só, por delegação.
-document.getElementById('editor-culto').addEventListener('input', ()=> edicaoSuja=true);
+document.getElementById('editor-culto').addEventListener('input', (ev)=>{
+  edicaoSuja=true;
+  if(ev.target.classList.contains('musica-titulo')) atualizarIndiceCulto(); // mantém o índice com o nome atualizado
+});
 document.getElementById('editor-musica').addEventListener('input', ()=> edicaoSuja=true);
 
 // FIX: o service worker existia no repositório mas nunca era registrado —
@@ -667,19 +713,29 @@ async function buscarAcervo(q){
     const lista=rc.musicas||[]; bibliotecaCache=lista;
     countEl.textContent=`${lista.length} músicas`;
     if(!lista.length){cont.innerHTML=`<div class="empty">Nenhuma para "${escaparHtml(q)}"</div>`; return;}
-    cont.innerHTML=lista.map(m=>`<div class="song-card" onclick="visualizarMusicaAcervo('${m.id}')"><div class="card-top"><div><div class="card-title">${destacarTermo(m.titulo,q)}</div><div class="card-meta">${destacarTermo(m.autores||'',q)}</div></div><span class="badge badge-cifra">${escaparHtml(m.tom||'C')}</span></div><div class="card-foot"><span>Acervo</span><span style="color:var(--brand);font-weight:800">👁️ Ver (sem criar culto) →</span></div></div>`).join('');
+    cont.innerHTML=lista.map(m=>`<div class="song-card" onclick="visualizarMusicaAcervo('${m.id}','${escaparHtml(m.titulo).replace(/'/g,"\\'")}','${escaparHtml(m.tom||'C')}')"><div class="card-top"><div><div class="card-title">${destacarTermo(m.titulo,q)}</div><div class="card-meta">${destacarTermo(m.autores||'',q)}</div></div><span class="badge badge-cifra">${escaparHtml(m.tom||'C')}</span></div><div class="card-foot"><span>Acervo</span><span style="color:var(--brand);font-weight:800">👁️ Ver (sem criar culto) →</span></div></div>`).join('');
   }catch(e){ if(minhaBusca===ultimaBuscaAcervo) cont.innerHTML=`<div class="empty">Erro na busca</div>`; }
 }
 let ultimaBuscaAcervo=0;
 let ultimaBuscaModal=0;
 function setAcervoFilter(t,btn){ document.querySelectorAll('#acervo .filter').forEach(b=>b.classList.remove('selected')); if(btn) btn.classList.add('selected'); if(t==='all') buscarAcervo('a'); }
+// FIX: essa busca não dava NENHUM feedback enquanto esperava a rede (a caixa
+// ficava em branco) e não tinha .catch() nenhum — se a rede falhasse ou
+// demorasse (comum no Apps Script "a frio", alguns segundos), a pessoa via
+// uma caixa vazia parada, sem saber se estava buscando, se deu erro, ou se
+// travou. Agora mostra "Buscando...", trata erro, e avisa quando não acha nada.
 function filterModalSongs(q){
   if(q.length<2){document.getElementById('modalSongList').innerHTML=''; return;}
   const minhaBusca=++ultimaBuscaModal;
+  document.getElementById('modalSongList').innerHTML=`<div class="empty" style="padding:16px"><div class="empty-icon">🔍</div>Buscando...</div>`;
   fetch(`${APPS_SCRIPT_URL}?acao=buscarBiblioteca&q=${encodeURIComponent(q)}&_=${Date.now()}`).then(r=>r.json()).then(rc=>{
     if(minhaBusca!==ultimaBuscaModal) return;
     const lista=rc.musicas||[];
-    document.getElementById('modalSongList').innerHTML=lista.map(m=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;border:1px solid var(--line);border-radius:10px;margin-bottom:6px"><span><strong>${destacarTermo(m.titulo,q)}</strong> <small>${escaparHtml(m.tom||'')}</small></span><button class="primary" style="width:auto;padding:6px 12px" onclick="adicionarMusicaAcervoNoCulto('${m.id}','${escaparHtml(m.titulo).replace(/'/g,"\\'")}','${escaparHtml(m.tom||'C')}')">＋ Usar</button></div>`).join('');
+    if(!lista.length){ document.getElementById('modalSongList').innerHTML=`<div class="empty" style="padding:16px">Nenhuma música encontrada</div>`; return; }
+    document.getElementById('modalSongList').innerHTML=lista.map(m=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;border:1px solid var(--line);border-radius:10px;margin-bottom:6px"><span><strong>${destacarTermo(m.titulo,q)}</strong> <small>${escaparHtml(m.tom||'')}</small></span><button class="primary" style="width:auto;padding:6px 12px" onclick="adicionarMusicaAcervoNoCulto('${m.id}','${escaparHtml(m.titulo).replace(/'/g,"\\'")}','${escaparHtml(m.tom||'C')}', this)">＋ Usar</button></div>`).join('');
+  }).catch(()=>{
+    if(minhaBusca!==ultimaBuscaModal) return;
+    document.getElementById('modalSongList').innerHTML=`<div class="empty" style="padding:16px">Erro na busca — verifique a conexão</div>`;
   });
 }
 
@@ -706,11 +762,14 @@ function parseCifraTexto(txt){
 }
 
 // --- LEITURA (SINGLE) ---
-function visualizarMusicaAcervo(id){
-  const m=bibliotecaCache.find(x=>x.id===id);
-  if(!m){ mostrarAviso('Música não encontrada'); return; }
+// FIX: mesma fragilidade do bug de "adicionar ao culto" — dependia só do
+// cache local. Hoje o único ponto que chama essa função já preenche o cache
+// antes, mas deixar de depender dele por completo evita o mesmo bug voltar
+// se algum dia outro lugar passar a chamar essa função.
+function visualizarMusicaAcervo(id, tituloFallback, tomFallback){
+  const m=bibliotecaCache.find(x=>x.id===id) || {titulo:tituloFallback||'Carregando...', autores:'', tom:tomFallback||'C'};
   abrirLeitura({titulo:m.titulo, autores:m.autores, tom:m.tom||'C', bpm:'', beat:'4/4', partes:[{nome:'MÚSICA',codigo:'IN',repeticao:'1x', linhas:[]}]});
-  fetch(`${APPS_SCRIPT_URL}?acao=carregarMusica&id=${encodeURIComponent(id)}&_=${Date.now()}`).then(r=>r.json()).then(j=>{ if(j.status==='sucesso' && j.partes){ abrirLeitura(j); } }).catch(()=>{});
+  fetch(`${APPS_SCRIPT_URL}?acao=carregarMusica&id=${encodeURIComponent(id)}&_=${Date.now()}`).then(r=>r.json()).then(j=>{ if(j.status==='sucesso' && j.partes){ abrirLeitura(j); } else { mostrarAviso('Não foi possível carregar os detalhes da música'); } }).catch(()=>{ mostrarAviso('Erro de conexão ao carregar a música'); });
 }
 function abrirLeitura(musica){
   musicaLeituraAtual=musica;
@@ -825,7 +884,7 @@ function criarHtmlParte(p){
   return `<div class="section parte" id="${idParte}" data-codigo="${escaparHtml(p.codigo||'IN')}" data-rep="${escaparHtml(p.repeticao||'1x')}" data-din="${escaparHtml(p.intensidade||'Médio')}" data-obs="${escaparHtml(p.observacao||'')}">
     <div class="section-head2" onclick="abrirSheetParte('${idParte}')">
       <input type="text" class="section-label nome-parte" value="${escaparHtml(p.nome||'PARTE')}" onclick="event.stopPropagation()" onfocus="this.select()">
-      <div class="section-meta meta-resumo"><span class="mini">${escaparHtml(p.codigo||'IN')}</span><span class="mini">${escaparHtml(p.repeticao||'1x')}</span></div>
+      <div class="section-meta meta-resumo"><span class="mini">${escaparHtml(p.codigo||'IN')}</span><span class="mini">${escaparHtml(p.repeticao||'1x')}</span><span class="mini" title="Toque para configurar a parte" style="cursor:pointer">⚙️</span></div>
     </div>
     <div class="chords" style="padding:12px 16px">
       ${linhasHtml}
@@ -835,7 +894,9 @@ function criarHtmlParte(p){
 }
 
 function novoRepertorio(){
-  editingCultoId=null; document.getElementById('cultoName').value='Culto de Domingo'; document.getElementById('cultoDate').value=new Date().toISOString().split('T')[0]; document.getElementById('cultoTime').value=''; document.getElementById('cultoNotes').value=''; document.getElementById('cultoSongsList').innerHTML=''; showScreen('editor-culto');
+  editingCultoId=null; document.getElementById('cultoName').value='Culto de Domingo'; document.getElementById('cultoDate').value=new Date().toISOString().split('T')[0]; document.getElementById('cultoTime').value=''; document.getElementById('cultoNotes').value=''; document.getElementById('cultoSongsList').innerHTML='';
+  document.getElementById('cultoSectionsNav').innerHTML=''; // FIX: senão ficavam botões "fantasma" de um culto anterior
+  showScreen('editor-culto');
 }
 async function carregarRepertorioDaNuvem(id){
   mostrarAviso('Carregando culto...'); try{
@@ -854,13 +915,27 @@ function adicionarMusicaNoCultoEditor(m){
   wrapper.innerHTML=`
     <div style="display:flex;justify-content:space-between;align-items:flex-end;margin:24px 0 8px;border-bottom:2px solid var(--line);padding-bottom:6px">
       <input type="text" class="musica-titulo" value="${escaparHtml(m.titulo||'Nova Música')}" style="font-family:var(--fd);font-size:22px;font-weight:900;border:none;background:transparent;outline:none;width:100%;color:var(--brand)">
-      <button class="btn-del-sec" onclick="this.closest('.musica-wrapper').remove(); edicaoSuja=true;" style="background:var(--surface-2);color:var(--danger);border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-weight:700">✕ Excluir</button>
+      <button class="btn-del-sec" onclick="this.closest('.musica-wrapper').remove(); edicaoSuja=true; atualizarIndiceCulto();" style="background:var(--surface-2);color:var(--danger);border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-weight:700">✕ Excluir</button>
     </div>
     <div class="partes-container">${partesHtml}</div>
     <div class="botoes-rodape-parte" style="margin-bottom:20px;justify-content:center"><button class="btn-acao-micro" style="padding:8px 14px" onclick="adicionarParteNaMusica(this)">＋ Adicionar Parte</button></div>
   `;
   cont.appendChild(wrapper);
   ativarDragLinhas(wrapper);
+  atualizarIndiceCulto();
+}
+
+// MELHORIA: o índice de músicas do culto (#cultoSectionsNav) existia na tela
+// mas nunca era preenchido — ficava sempre uma barra vazia, sem função. Agora
+// lista as músicas do repertório e pula direto pra qualquer uma ao tocar,
+// prático pra repertórios com muitas músicas durante a edição.
+function atualizarIndiceCulto(){
+  const nav=document.getElementById('cultoSectionsNav'); if(!nav) return;
+  const wrappers=[...document.querySelectorAll('#cultoSongsList .musica-wrapper')];
+  nav.innerHTML=wrappers.map((w,i)=>{
+    const titulo=w.querySelector('.musica-titulo')?.value || `Música ${i+1}`;
+    return `<button class="seg" onclick="document.getElementById('${w.id}').scrollIntoView({behavior:'smooth',block:'start'})">${escaparHtml(titulo.length>18?titulo.slice(0,18)+'…':titulo)}</button>`;
+  }).join('');
 }
 
 function openAddSongToCultoModal(){ document.getElementById('modalSearch').value=''; document.getElementById('modalSongList').innerHTML='<div class="empty">Digite 3 letras para buscar</div>'; showModal('addSongModal'); }
@@ -871,7 +946,12 @@ function openAddSongToCultoModal(){ document.getElementById('modalSearch').value
 // visível — parecia a tela travada. Agora ela sempre tenta buscar a música
 // pela rede, e só usa título/tom de fallback (passados pelo próprio botão)
 // se a rede falhar — nunca depende de um cache que pode não existir.
-function adicionarMusicaAcervoNoCulto(id, tituloFallback, tomFallback){
+// FIX/MELHORIA: sem nenhum feedback ao tocar em "Usar", uma resposta lenta do
+// Apps Script (comum "a frio", alguns segundos) parecia travamento — a pessoa
+// não sabia se o toque tinha "pego" e às vezes tocava de novo. Agora o botão
+// trava e avisa "Adicionando..." na hora do toque.
+function adicionarMusicaAcervoNoCulto(id, tituloFallback, tomFallback, btnEl){
+  if(btnEl){ btnEl.disabled=true; btnEl.textContent='⏳ Adicionando...'; }
   const preencherFallback=()=>({titulo:tituloFallback||'Música', autores:'', tom:tomFallback||'C', partes:[{nome:'VERSO 1',codigo:'V1',repeticao:'1x', linhas:[]}]});
   fetch(`${APPS_SCRIPT_URL}?acao=carregarMusica&id=${encodeURIComponent(id)}&_=${Date.now()}`).then(r=>r.json()).then(j=>{
     const m = (j.status==='sucesso' && j.partes) ? j : preencherFallback();
@@ -879,6 +959,8 @@ function adicionarMusicaAcervoNoCulto(id, tituloFallback, tomFallback){
   }).catch(()=>{
     adicionarMusicaNoCultoEditor(preencherFallback()); edicaoSuja=true; closeModal('addSongModal');
     mostrarAviso('Adicionada com dados básicos — sem conexão pra buscar detalhes');
+  }).finally(()=>{
+    if(btnEl && document.body.contains(btnEl)){ btnEl.disabled=false; btnEl.textContent='＋ Usar'; }
   });
 }
 
@@ -896,7 +978,17 @@ function getDragAfterElement(container,y){
   return els.reduce((closest,child)=>{const box=child.getBoundingClientRect(); const offset=y-box.top-box.height/2; if(offset<0&&offset>closest.offset){return {offset,element:child}}else return closest},{offset:Number.NEGATIVE_INFINITY}).element;
 }
 
-function removerLinha(btn){btn.closest('.linha-grupo').remove(); edicaoSuja=true;}
+// MELHORIA: antes, excluir uma linha era instantâneo e sem aviso — um toque
+// sem querer no "✕" perdia cifra/letra/observação pra sempre, sem chance de
+// desfazer (mesmo saindo sem salvar, se já tivesse tocado em salvar antes).
+// Só pede confirmação se a linha tiver algum conteúdo — linha em branco (recém
+// criada, ainda vazia) continua removendo direto, sem travar o fluxo à toa.
+function removerLinha(btn){
+  const grupo=btn.closest('.linha-grupo');
+  const temConteudo=[...grupo.querySelectorAll('.linha-cifra,.linha-letra,.linha-obs')].some(el=>el.innerText.trim().length>0);
+  if(temConteudo && !confirm('Excluir esta linha?')) return;
+  grupo.remove(); edicaoSuja=true;
+}
 function duplicarLinha(btn){const g=btn.closest('.linha-grupo'); const c=g.cloneNode(true); c.dataset.linhaId=gerarId(); g.after(c); edicaoSuja=true;}
 function adicionarLinhaNaParte(btn){
   const chords=btn.closest('.chords'); const w=document.createElement('div'); w.innerHTML=criarHtmlLinha({cifra:'',letra:'',observacao:''});
