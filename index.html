@@ -122,8 +122,16 @@ h1{font-size:28px;line-height:1.1;margin:2px 0 7px;letter-spacing:-1px;font-fami
 .linha-cifra{font-family:var(--fm);font-weight:700;color:var(--cifra);font-size:var(--t);line-height:1.55;white-space:pre-wrap;word-break:break-all;outline:none;min-height:1.3em;padding:1px 4px;border-radius:5px}
 .linha-conteudo-duplo{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-top:2px}
 .linha-letra{font-family:var(--fd);font-size:calc(var(--t) + 1px);line-height:1.6;outline:none;min-height:1.35em;color:var(--text);padding:1px 4px;border-radius:5px;flex:1;white-space:pre-wrap}
-.linha-obs{font-family:var(--fu);font-size:calc(var(--t) * .85);font-style:italic;line-height:1.35;outline:none;min-height:1.2em;color:var(--obs);padding:1px 6px;border-radius:5px;text-align:right;max-width:42%;font-weight:600;background:color-mix(in srgb,var(--destaque) 60%, transparent);border:1px dashed transparent}
+/* MELHORIA: direction:rtl é o truque padrão pra fazer o texto "entrar" pela
+   direita e crescer pra esquerda — igual campo de busca de app de chat. Sem
+   isso, num campo estreito alinhado à direita, o texto mais recente digitado
+   podia ficar escondido à esquerda enquanto você digitava. O idioma continua
+   português normal (letras não invertem, só a "âncora" de digitação muda). */
+.linha-obs{font-family:var(--fu);font-size:calc(var(--t) * .85);font-style:italic;line-height:1.35;outline:none;min-height:1.2em;color:var(--obs);padding:1px 6px;border-radius:5px;text-align:right;direction:rtl;unicode-bidi:plaintext;max-width:42%;font-weight:600;background:color-mix(in srgb,var(--destaque) 60%, transparent);border:1px dashed transparent}
 .linha-grupo:hover .linha-obs{border-color:var(--line)}
+.btn-campo-fantasma{border:1px dashed var(--line);background:none;color:var(--suave);font-size:calc(var(--t) * .82);font-style:italic;padding:2px 8px;border-radius:5px;cursor:pointer;font-family:var(--fu)}
+.btn-campo-fantasma.fantasma-letra{flex:1;text-align:left}
+body.modo-corrido .btn-campo-fantasma{display:none !important}
 [contenteditable]:empty:before{content:attr(data-placeholder);color:var(--muted);opacity:.5;font-weight:400;pointer-events:none}
 .linha-acoes{position:absolute;right:4px;top:4px;display:flex;gap:2px;opacity:0;transition:opacity .15s;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:2px;box-shadow:var(--shadow)}
 .linha-grupo:hover .linha-acoes,.linha-grupo.focada .linha-acoes{opacity:1}
@@ -164,6 +172,15 @@ body.modo-fullscreen .bottom{ display:none !important; }
 body.modo-fullscreen .app{ padding-bottom:0; }
 body.modo-fullscreen .exec-head{ padding:10px 16px 10px; }
 body.modo-fullscreen .exec-sub{ display:none; } /* autor+tom fica redundante já dentro da cifra */
+
+.aviso-somente-leitura{background:var(--destaque,#FEF3C7);color:#8a5a00;font-size:12px;font-weight:800;text-align:center;padding:9px 14px;cursor:pointer;border-bottom:1px solid rgba(0,0,0,.06)}
+
+/* MELHORIA: tela de carregamento inicial (splash) */
+.tela-carregamento{position:fixed;inset:0;z-index:500;background:var(--bg);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
+.tela-carregamento.ativa{opacity:1;pointer-events:all}
+.spinner-carregamento{width:32px;height:32px;border:3px solid var(--line);border-top-color:var(--brand);border-radius:50%;margin:0 auto;animation:girarCarregamento .8s linear infinite}
+@keyframes girarCarregamento{to{transform:rotate(360deg)}}
+@keyframes pulsarLogo{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
 
 /* MODO CORRIDO / VISUALIZAÇÃO */
 body.modo-corrido .chordline{white-space:pre; font-size:16px}
@@ -218,7 +235,12 @@ body.modo-corrido [contenteditable]:empty:before{display:none !important}
   .exec-title { color:#000 !important; }
   .exec-head input { border:none !important; background:transparent !important; color:#000 !important; padding:2px 0 !important; }
 
-  .song-info, .section, .parte { box-shadow:none !important; border:1px solid #999 !important; page-break-inside:avoid; }
+  /* MOTOR DE IMPRESSÃO: Mantendo as caixas e contornos, conforme Tabernáculos.PDF */
+  .song-info { box-shadow:none !important; border:1px solid #999 !important; page-break-inside:avoid; }
+  .section, .parte { page-break-inside:avoid; border: 1px solid #999 !important; background: transparent !important; margin: 0 18px 12px !important; border-radius: 19px !important; box-shadow:none !important; }
+  .section-head2 { border-bottom:1px solid #999 !important; padding:15px 16px 12px !important; }
+  .chords { padding: 19px 17px 23px !important; }
+  .linha-grupo { border:none !important; background:transparent !important; padding:2px 0 !important; margin-bottom:6px !important; }
   .section-label, .info-title, .musica-titulo { color:#000 !important; }
   .chordline, .linha-cifra { color:#000 !important; font-weight:800 !important; }
   .lyricline, .linha-letra { color:#000 !important; }
@@ -239,6 +261,18 @@ body.modo-corrido [contenteditable]:empty:before{display:none !important}
     <div class="brand"><div class="brand-mark">D</div><div class="brand-name">DraftPro</div><div class="church" id="churchName">IGREJA CENTRAL</div></div>
     <div style="display:flex;gap:8px"><button class="icon-btn" onclick="toggleDarkMode()">🌙</button><button class="icon-btn" onclick="logout()">↪</button></div>
   </header>
+
+  <!-- MELHORIA: tela de carregamento inicial — antes, ao logar, a Home ficava
+       com "Nenhum culto carregado" até você tocar manualmente em "Carregar
+       cultos atuais". Agora essa busca já roda sozinha, com essa animação
+       cobrindo a tela enquanto isso, pra sentir tudo pronto ao entrar. -->
+  <div id="telaCarregamento" class="tela-carregamento">
+    <div class="carregamento-conteudo">
+      <div class="brand-mark" style="width:52px;height:52px;font-size:22px;margin:0 auto 16px;animation:pulsarLogo 1.4s ease-in-out infinite">D</div>
+      <div class="spinner-carregamento"></div>
+      <p id="statusCarregamento" style="margin-top:14px;color:var(--muted);font-size:13px;font-weight:700">Carregando...</p>
+    </div>
+  </div>
 
   <!-- LOGIN -->
   <main id="login" class="screen active" style="padding-top:40px">
@@ -286,10 +320,13 @@ body.modo-corrido [contenteditable]:empty:before{display:none !important}
     <div id="historicoList"><div class="empty"><div class="empty-icon">🔍</div>Use os filtros acima e clique em Buscar</div></div>
   </main>
 
-  <!-- ACERVO -->
+  <!-- BIBLIOTECA -->
   <main id="acervo" class="screen">
-    <h1>Acervo</h1><p class="sub">Sua biblioteca. Digite 3 letras pra buscar - não carrega tudo.</p>
-    <div class="search">⌕ <input id="searchSongs" placeholder="Buscar música, autor... (ex: batendo)" oninput="debouncedBuscarAcervo(this.value)"></div>
+    <h1>Biblioteca</h1><p class="sub">O seu catálogo completo. Pesquise por título, autor ou trecho.</p>
+    <div class="search">⌕ <input id="searchSongs" type="search" enterkeyhint="search" placeholder="Buscar música, autor ou trecho..." onkeydown="if(event.key==='Enter') buscarAcervo(this.value)"><button class="btn-acao-micro" style="flex-shrink:0" onclick="buscarAcervo(document.getElementById('searchSongs').value)">🔍</button></div>
+    
+    <div id="barra-az" style="display:flex; gap:6px; overflow-x:auto; padding-bottom:12px; margin-bottom:8px; border-bottom:1px solid var(--line); scrollbar-width:none"></div>
+    
     <div class="filter-row">
       <button class="filter selected" onclick="setAcervoFilter('all',this)">Todas</button>
       <button class="filter" onclick="setAcervoFilter('recentes',this)">Recentes</button>
@@ -339,6 +376,14 @@ body.modo-corrido [contenteditable]:empty:before{display:none !important}
         <button class="primary" style="width:auto;padding:8px 14px" onclick="saveCulto()">💾 Salvar culto</button>
         <button class="compact-btn btn-imprimir-app" onclick="window.print()">🖨️ Imprimir</button>
       </div>
+    </div>
+    <!-- MELHORIA: aviso bem visível quando o culto está travado pra edição
+         (Modo Corrido ligado). Antes não tinha nada óbvio avisando isso —
+         se o Modo Corrido ficasse ligado de uma sessão anterior (ele é salvo
+         como padrão), a pessoa achava que o texto "não editava" sem entender
+         por quê. Agora aparece um aviso que já é o próprio botão pra desligar. -->
+    <div id="avisoSomenteLeituraCulto" class="aviso-somente-leitura" style="display:none" onclick="alternarModoCorrido(false)">
+      🔒 Modo somente leitura — toque aqui para voltar a editar
     </div>
     <div class="structure-wrap"><div class="structure" id="cultoSectionsNav"></div></div>
     <!-- ÁREA DE MÚSICAS EDITOR -->
@@ -413,14 +458,20 @@ Vem meu amor..."></textarea>
       <div class="sheet-campo"><label>Dinâmica</label><select id="sheet-dinamica"><option>Médio</option><option>Forte</option><option>Suave</option><option>Explosão</option><option>Intro</option></select></div>
       <div class="sheet-campo full"><label>Obs geral da parte</label><input type="text" id="sheet-obs" placeholder="Ex: Só bateria + baixo"></div>
     </div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
-      <button class="secondary" onclick="fecharSheetParte()">Cancelar</button>
-      <button class="primary" onclick="salvarSheetParte()">Salvar parte</button>
+    <div style="display:flex;gap:8px;justify-content:space-between;margin-top:8px">
+      <div style="display:flex;gap:8px">
+        <button class="secondary" onclick="duplicarParte()">⧉ Duplicar</button>
+        <button class="secondary" style="color:var(--danger); border-color:var(--danger)" onclick="excluirParteSheet()">✕ Excluir</button>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="secondary" onclick="fecharSheetParte()">Cancelar</button>
+        <button class="primary" onclick="salvarSheetParte()">Salvar parte</button>
+      </div>
     </div>
   </div>
 
   <!-- MODAIS -->
-  <div class="modal" id="addSongModal"><div class="modal-content"><h3 style="margin-top:0">Adicionar ao culto</h3><div class="search" style="margin:10px 0 15px">⌕ <input id="modalSearch" placeholder="Buscar... (3 letras)" oninput="filterModalSongs(this.value)"></div><div id="modalSongList" style="max-height:320px;overflow-y:auto"></div><div class="modal-buttons"><button class="secondary" onclick="closeModal('addSongModal')">Cancelar</button></div></div></div>
+  <div class="modal" id="addSongModal"><div class="modal-content"><h3 style="margin-top:0">Adicionar ao culto</h3><div class="search" style="margin:10px 0 15px">⌕ <input id="modalSearch" type="search" enterkeyhint="search" placeholder="Buscar... (3 letras)" onkeydown="if(event.key==='Enter') filterModalSongs(this.value)"><button class="btn-acao-micro" style="flex-shrink:0" onclick="filterModalSongs(document.getElementById('modalSearch').value)">🔍</button></div><div id="modalSongList" style="max-height:320px;overflow-y:auto"></div><div class="modal-buttons"><button class="secondary" onclick="closeModal('addSongModal')">Cancelar</button></div></div></div>
   <div class="modal" id="importModal">
     <div class="modal-content">
       <h3>Importar</h3>
@@ -454,7 +505,7 @@ Vem meu amor..."></textarea>
     <button class="nav active" data-target="home" onclick="showScreen('home')"><span class="nicon">⌂</span>Início</button>
     <button class="nav" data-target="cultos" onclick="showScreen('cultos')"><span class="nicon">📅</span>Cultos</button>
     <button class="nav" data-target="historico" onclick="showScreen('historico')"><span class="nicon">🕑</span>Histórico</button>
-    <button class="nav" data-target="acervo" onclick="showScreen('acervo')"><span class="nicon">📚</span>Acervo</button>
+    <button class="nav" data-target="acervo" onclick="showScreen('acervo')"><span class="nicon">📚</span>Biblioteca</button>
     <button class="nav" data-target="settings" onclick="showScreen('settings')"><span class="nicon">⚙</span>Ajustes</button>
   </nav>
 </div>
@@ -536,6 +587,7 @@ window.addEventListener('DOMContentLoaded', ()=>{
   const s=localStorage.getItem('draftProIgreja');
   if(s){
     igrejaLogada=s; isAdmin=localStorage.getItem('draftProAdmin')==='true'; document.getElementById('login').classList.remove('active'); showScreen('home'); document.getElementById('churchName').textContent=s.toUpperCase();
+    iniciarCarregamentoInicial();
   } else {
     // FIX: sem sessão salva, showScreen('login') nunca era chamado — e como
     // a barra inferior só é escondida DENTRO de showScreen(), ela ficava
@@ -547,7 +599,26 @@ window.addEventListener('DOMContentLoaded', ()=>{
   if(localStorage.getItem('modoCorrido')==='true') alternarModoCorrido(true);
   if(localStorage.getItem('dp_dark')==='true') toggleDarkMode(true);
   salvarUltimoAtivo(); setInterval(salvarUltimoAtivo,60000);
+  renderizarBarraAZ(); // Injeta o alfabeto na Biblioteca
 });
+
+function renderizarBarraAZ() {
+  const barra = document.getElementById('barra-az');
+  if(!barra) return;
+  let html = `<button class="filter selected" onclick="filtrarPorLetra('', this)">Tudo</button>`;
+  for(let i=65; i<=90; i++) {
+    const letra = String.fromCharCode(i);
+    html += `<button class="filter" onclick="filtrarPorLetra('${letra}', this)">${letra}</button>`;
+  }
+  barra.innerHTML = html;
+}
+
+function filtrarPorLetra(letra, btn) {
+  document.querySelectorAll('#barra-az .filter').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  document.getElementById('searchSongs').value = letra;
+  buscarAcervo(letra);
+}
 
 // TRAVA ANTI-ACIDENTE (F5 / Fechar aba)
 window.addEventListener('beforeunload', (e) => {
@@ -575,7 +646,7 @@ if('serviceWorker' in navigator){
 }
 
 function updateClock(){document.getElementById('statusTime').textContent=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}
-function fazerLogin(i){igrejaLogada=i; isAdmin=false; localStorage.setItem('draftProIgreja',i); localStorage.setItem('draftProAdmin','false'); document.getElementById('login').classList.remove('active'); document.getElementById('churchName').textContent=i.toUpperCase(); showScreen('home'); salvarUltimoAtivo()}
+function fazerLogin(i){igrejaLogada=i; isAdmin=false; localStorage.setItem('draftProIgreja',i); localStorage.setItem('draftProAdmin','false'); document.getElementById('login').classList.remove('active'); document.getElementById('churchName').textContent=i.toUpperCase(); showScreen('home'); salvarUltimoAtivo(); iniciarCarregamentoInicial();}
 function pedirSenhaAdmin(){const s=prompt('Senha admin:'); if(s==='culto123'){fazerLogin('Administração'); isAdmin=true; localStorage.setItem('draftProAdmin','true');} else if(s) alert('Senha incorreta')}
 function carregarDemo(){
   const demo={titulo:'Batendo a porta (DEMO)', autores:'Morada', tom:'C#m', bpm:'72', beat:'4/4', partes:[{nome:'VERSO',codigo:'V1',repeticao:'1x',linhas:[{cifra:'C#m7           B2',letra:'Nós não pararemos de clamar',obs:'Marcação'},{cifra:'     F#m       A9',letra:'Até que o reino venha',obs:''}]}]};
@@ -610,6 +681,8 @@ function atualizarModoTelaCheia(){
   const telasDeLeitura = ['execution','editor-culto'];
   const deveSerTelaCheia = document.body.classList.contains('modo-corrido') && telasDeLeitura.includes(currentScreen);
   document.body.classList.toggle('modo-fullscreen', deveSerTelaCheia);
+  const bannerLeitura=document.getElementById('avisoSomenteLeituraCulto'); // MELHORIA: sincroniza também ao entrar na tela, não só ao tocar no botão
+  if(bannerLeitura) bannerLeitura.style.display = (currentScreen==='editor-culto' && document.body.classList.contains('modo-corrido')) ? 'block' : 'none';
   // MELHORIA: além de esconder os elementos do app, tenta também a tela cheia
   // real do dispositivo (esconde barra do Android/navegador). Best-effort: o
   // navegador só permite isso a partir de um toque direto do usuário — se
@@ -695,6 +768,27 @@ function renderCultosAtuais(){
 }
 function openCurrentCulto(){ if(currentCultoId) carregarRepertorioDaNuvem(currentCultoId); }
 
+// MELHORIA: pré-carrega os cultos automaticamente ao logar/reabrir o app,
+// com uma tela de carregamento cobrindo a espera — antes a Home ficava vazia
+// até um toque manual em "Carregar cultos atuais". Tem um limite de segurança
+// de 5s: se a rede estiver lenta, a tela libera mesmo assim (a busca continua
+// em segundo plano e atualiza a Home sozinha quando terminar), pra nunca
+// prender a pessoa numa tela de carregamento infinita.
+async function iniciarCarregamentoInicial(){
+  const tela=document.getElementById('telaCarregamento');
+  tela.classList.add('ativa');
+  document.getElementById('statusCarregamento').textContent='A carregar dados...';
+  const limiteSeguranca=new Promise(resolve=>setTimeout(resolve,5000));
+  await Promise.race([ carregarCultosAtuais(true), limiteSeguranca ]);
+  tela.classList.remove('ativa');
+  
+  // BACKGROUND FETCH: Descarrega a biblioteca em silêncio após libertar o ecrã
+  fetch(`${APPS_SCRIPT_URL}?acao=buscarBiblioteca&q=&igreja=${encodeURIComponent(igrejaLogada)}&_=${Date.now()}`)
+    .then(r => r.json())
+    .then(rc => { if(rc.musicas) bibliotecaCache = rc.musicas; })
+    .catch(() => console.log('Background fetch falhou graciosamente'));
+}
+
 // --- HISTÓRICO ---
 async function carregarHistorico(){
   const nome=document.getElementById('filtro-hist-nome').value.trim(); const inicio=document.getElementById('filtro-hist-inicio').value; const fim=document.getElementById('filtro-hist-fim').value; const igreja=document.getElementById('filtro-hist-igreja').value;
@@ -714,8 +808,6 @@ async function excluirCulto(id){
 }
 
 // --- ACERVO ---
-let tBusca=null;
-function debouncedBuscarAcervo(q){ clearTimeout(tBusca); tBusca=setTimeout(()=>buscarAcervo(q),350); }
 async function buscarAcervo(q){
   if(q===undefined) q=document.getElementById('searchSongs').value.trim();
   const cont=document.getElementById('songsList'); const countEl=document.getElementById('songCount');
@@ -744,11 +836,17 @@ function setAcervoFilter(t,btn){ document.querySelectorAll('#acervo .filter').fo
 // demorasse (comum no Apps Script "a frio", alguns segundos), a pessoa via
 // uma caixa vazia parada, sem saber se estava buscando, se deu erro, ou se
 // travou. Agora mostra "Buscando...", trata erro, e avisa quando não acha nada.
+// FIX CRÍTICO: essa busca nunca mandava o parâmetro "igreja" pro backend.
+// No Code.gs, a regra de isolamento (buscarBiblioteca_) só mostra músicas
+// "Geral" quando a igreja vem vazia — então TODA música específica da sua
+// igreja ficava invisível aqui, mesmo aparecendo normal na busca do Acervo
+// (que já mandava esse parâmetro certinho). Por isso funcionava num culto
+// "por acaso" (se caiu numa música Geral) e não em outros.
 function filterModalSongs(q){
-  if(q.length<2){document.getElementById('modalSongList').innerHTML=''; return;}
+  if(q.length<3){document.getElementById('modalSongList').innerHTML=q.length?`<div class="empty" style="padding:16px">Digite pelo menos 3 letras</div>`:''; return;}
   const minhaBusca=++ultimaBuscaModal;
   document.getElementById('modalSongList').innerHTML=`<div class="empty" style="padding:16px"><div class="empty-icon">🔍</div>Buscando...</div>`;
-  fetch(`${APPS_SCRIPT_URL}?acao=buscarBiblioteca&q=${encodeURIComponent(q)}&_=${Date.now()}`).then(r=>r.json()).then(rc=>{
+  fetch(`${APPS_SCRIPT_URL}?acao=buscarBiblioteca&q=${encodeURIComponent(q)}&igreja=${encodeURIComponent(igrejaLogada)}&_=${Date.now()}`).then(r=>r.json()).then(rc=>{
     if(minhaBusca!==ultimaBuscaModal) return;
     const lista=rc.musicas||[];
     if(!lista.length){ document.getElementById('modalSongList').innerHTML=`<div class="empty" style="padding:16px">Nenhuma música encontrada</div>`; return; }
@@ -867,6 +965,8 @@ function alternarModoCorrido(force){
   localStorage.setItem('modoCorrido', ativo?'true':'false');
   document.querySelectorAll('#btn-corrido-exec, #btn-corrido-culto').forEach(b=>{ if(b){ b.classList.toggle('ativo',ativo); b.textContent=ativo?'🧩 Separado':'📄 Corrido'; } });
   document.getElementById('corridoSwitch')?.classList.toggle('on',ativo);
+  const bannerLeitura=document.getElementById('avisoSomenteLeituraCulto');
+  if(bannerLeitura) bannerLeitura.style.display = ativo ? 'block' : 'none';
   atualizarModoTelaCheia(); // MELHORIA: reflete tela cheia na hora, sem precisar trocar de tela
   mostrarAviso(ativo?'📄 Modo corrido / Somente Leitura':'🧩 Modo de edição (Arrastar/Quebrar)');
 }
@@ -875,23 +975,65 @@ function ajustarZoom(d){ tamanhoFonteAtual=Math.max(0.7,Math.min(1.3,tamanhoFont
 /* ======================================================================
    RESGATE: MOTOR DE EDIÇÃO E DRAG & DROP DO CULTO
    ====================================================================== */
+// MELHORIA: cifra/letra agora podem ser explicitamente "ausentes" (null) em
+// vez de só "vazias" (''). Isso importa pra partes como Intro/Interlúdio, que
+// normalmente só têm cifra e nenhuma letra — em vez de deixar uma caixa de
+// letra vazia sempre visível (parecendo campo esquecido/incompleto), a pessoa
+// pode remover esse campo pra aquela linha, deixando só o que faz sentido.
+// null = "campo removido" (vira um botão fantasma "+ Cifra"/"+ Letra" pra
+// trazer de volta); '' = "campo presente, só ainda vazio".
 function criarHtmlLinha(l){
   l=l||{}; const idL=gerarId();
+  const temCifra = l.cifra !== null;
+  const temLetra = l.letra !== null;
+  const campoCifra = temCifra
+    ? `<div class="linha-cifra" contenteditable="true" spellcheck="false" data-placeholder="Cifra...">${escaparHtml(l.cifra||'')}</div>`
+    : `<button type="button" class="btn-campo-fantasma" onclick="restaurarCampo(this,'cifra')">+ Cifra</button>`;
+  const campoLetra = temLetra
+    ? `<div class="linha-letra" contenteditable="true" data-placeholder="Letra...">${escaparHtml(l.letra||'')}</div>`
+    : `<button type="button" class="btn-campo-fantasma fantasma-letra" onclick="restaurarCampo(this,'letra')">+ Letra</button>`;
   return `<div class="linha-grupo" data-linha-id="${idL}" draggable="true">
     <div class="linha-handle" title="Arrastar">≡</div>
     <div class="linha-corpo">
-      <div class="linha-cifra" contenteditable="true" spellcheck="false" data-placeholder="Cifra...">${escaparHtml(l.cifra||'')}</div>
+      ${campoCifra}
       <div class="linha-conteudo-duplo">
-        <div class="linha-letra" contenteditable="true" data-placeholder="Letra...">${escaparHtml(l.letra||'')}</div>
+        ${campoLetra}
         <div class="linha-obs" contenteditable="true" data-placeholder="obs...">${escaparHtml(l.observacao||'')}</div>
       </div>
     </div>
     <div class="linha-acoes">
+      <button class="linha-acao-btn" onclick="removerCampo(this,'cifra')" title="Remover só a cifra desta linha">🎵✕</button>
+      <button class="linha-acao-btn" onclick="removerCampo(this,'letra')" title="Remover só a letra desta linha">📝✕</button>
       <button class="linha-acao-btn" onclick="quebrarParteAqui(this)" title="Quebrar parte aqui">✂️</button>
       <button class="linha-acao-btn" onclick="duplicarLinha(this)" title="Duplicar">⧉</button>
       <button class="linha-acao-btn danger" onclick="removerLinha(this)" title="Excluir">✕</button>
     </div>
   </div>`;
+}
+
+// Remove só o campo de cifra ou de letra de uma linha (deixa um botão
+// fantasma no lugar, pra trazer de volta quando quiser).
+function removerCampo(btn, tipo){
+  const grupo=btn.closest('.linha-grupo'); // FIX: .linha-acoes é irmã de .linha-corpo, não filha — precisa subir até .linha-grupo primeiro
+  const campo=grupo.querySelector(tipo==='cifra' ? '.linha-cifra' : '.linha-letra');
+  if(!campo) return; // já removido
+  const fantasma=document.createElement('button');
+  fantasma.type='button';
+  fantasma.className='btn-campo-fantasma'+(tipo==='letra'?' fantasma-letra':'');
+  fantasma.textContent=tipo==='cifra' ? '+ Cifra' : '+ Letra';
+  fantasma.onclick=()=>restaurarCampo(fantasma, tipo);
+  campo.replaceWith(fantasma);
+  edicaoSuja=true;
+}
+function restaurarCampo(btn, tipo){
+  const novo=document.createElement('div');
+  novo.className=tipo==='cifra' ? 'linha-cifra' : 'linha-letra';
+  novo.contentEditable='true';
+  if(tipo==='cifra') novo.spellcheck=false;
+  novo.dataset.placeholder=tipo==='cifra' ? 'Cifra...' : 'Letra...';
+  btn.replaceWith(novo);
+  novo.focus();
+  edicaoSuja=true;
 }
 
 function criarHtmlParte(p){
@@ -902,7 +1044,8 @@ function criarHtmlParte(p){
   // salvo, a "observação geral da parte" voltava sempre em branco no bottom
   // sheet — e salvar de novo apagava a observação que já estava no banco.
   return `<div class="section parte" id="${idParte}" data-codigo="${escaparHtml(p.codigo||'IN')}" data-rep="${escaparHtml(p.repeticao||'1x')}" data-din="${escaparHtml(p.intensidade||'Médio')}" data-obs="${escaparHtml(p.observacao||'')}">
-    <div class="section-head2" onclick="abrirSheetParte('${idParte}')">
+    <div class="section-head2" onclick="abrirSheetParte('${idParte}')" draggable="true" ondragstart="iniciarDragParte(event, this)" ondragend="encerrarDragParte(event, this)" ondragover="permitirDropParte(event)" ondrop="soltarParte(event, this)">
+      <div style="cursor:grab; padding-right:12px; color:var(--muted); font-size:18px; user-select:none" title="Arrastar Parte Inteira" onmousedown="this.parentElement.draggable=true" onmouseup="this.parentElement.draggable=false" onmouseleave="this.parentElement.draggable=false">≡</div>
       <input type="text" class="section-label nome-parte" value="${escaparHtml(p.nome||'PARTE')}" onclick="event.stopPropagation()" onfocus="this.select()">
       <div class="section-meta meta-resumo"><span class="mini">${escaparHtml(p.codigo||'IN')}</span><span class="mini">${escaparHtml(p.repeticao||'1x')}</span><span class="mini" title="Toque para configurar a parte" style="cursor:pointer">⚙️</span></div>
     </div>
@@ -990,6 +1133,23 @@ function adicionarMusicaAcervoNoCulto(id, tituloFallback, tomFallback, btnEl){
   });
 }
 
+// DRAG E DROP DE PARTES INTEIRAS
+let parteArrastada = null;
+function iniciarDragParte(ev, el) { parteArrastada = el.closest('.parte'); setTimeout(() => parteArrastada.style.opacity = '0.4', 0); ev.stopPropagation(); }
+function encerrarDragParte(ev, el) { if(parteArrastada) parteArrastada.style.opacity = '1'; parteArrastada = null; el.draggable = false; }
+function permitirDropParte(ev) { ev.preventDefault(); }
+function soltarParte(ev, el) {
+  ev.preventDefault();
+  const parteAlvo = el.closest('.parte');
+  if(parteArrastada && parteArrastada !== parteAlvo) {
+    const container = parteAlvo.parentElement;
+    const todasPartes = [...container.querySelectorAll('.parte')];
+    if (todasPartes.indexOf(parteArrastada) < todasPartes.indexOf(parteAlvo)) { parteAlvo.after(parteArrastada); } 
+    else { parteAlvo.before(parteArrastada); }
+    edicaoSuja = true; atualizarIndiceCulto();
+  }
+}
+
 // DRAG E DROP E AÇÕES DE LINHA
 function ativarDragLinhas(scope){
   let dragEl=null;
@@ -1017,22 +1177,19 @@ function removerLinha(btn){
 }
 function duplicarLinha(btn){const g=btn.closest('.linha-grupo'); const c=g.cloneNode(true); c.dataset.linhaId=gerarId(); g.after(c); edicaoSuja=true;}
 
-// CLONAGEM LIMPA DE PARTE
+// CLONAGEM RÁPIDA DE PARTE NA TELA (Evita IDs duplicados)
 function duplicarParteCompleta(btn) {
   const parteAtual = btn.closest('.parte');
-  const parteClonada = parteAtual.cloneNode(true);
-  parteClonada.id = gerarId();
-  
-  // Limpa RGs de cada linha para não "congelar" a edição das cópias
-  parteClonada.querySelectorAll('.linha-grupo').forEach(linha => {
-    linha.dataset.linhaId = gerarId();
-  });
-  
-  parteAtual.after(parteClonada);
-  ativarDragLinhas(parteClonada);
+  const dados = extrairDadosDeUmaParte(parteAtual); // Reutiliza a extração segura
+  const temp = document.createElement('div');
+  temp.innerHTML = criarHtmlParte(dados);
+  const parteNova = temp.firstElementChild;
+  parteAtual.after(parteNova);
+  ativarDragLinhas(parteNova);
   edicaoSuja = true;
   mostrarAviso('Parte duplicada (pronta para edição)');
 }
+
 function adicionarLinhaNaParte(btn){
   const chords=btn.closest('.chords'); const w=document.createElement('div'); w.innerHTML=criarHtmlLinha({cifra:'',letra:'',observacao:''});
   const n=w.firstElementChild; chords.insertBefore(n, btn.closest('.botoes-rodape-parte')); ativarDragLinhas(chords); n.querySelector('.linha-cifra').focus();
@@ -1056,6 +1213,32 @@ function quebrarParteAqui(btn){
   edicaoSuja=true;
 }
 
+// MELHORIA: extrai os dados de UMA parte já existente na tela — usado pra
+// duplicar. Reaproveita criarHtmlParte() pra gerar a cópia (em vez de
+// cloneNode), porque cloneNode copiaria os onclick com o ID ANTIGO embutido
+// nas strings (ex: abrirSheetParte('id-velho')), fazendo a cópia abrir as
+// configurações da parte ORIGINAL em vez de si mesma — um bug sutil e fácil
+// de não perceber até mexer na parte errada sem querer.
+function extrairDadosDeUmaParte(parteEl){
+  const pObj={ nome:parteEl.querySelector('.nome-parte').value, codigo:parteEl.dataset.codigo, repeticao:parteEl.dataset.rep, intensidade:parteEl.dataset.din, observacao:parteEl.dataset.obs, linhas:[] };
+  parteEl.querySelectorAll('.linha-grupo').forEach(l=>{
+    const cifraEl=l.querySelector('.linha-cifra'), letraEl=l.querySelector('.linha-letra'), obsEl=l.querySelector('.linha-obs');
+    pObj.linhas.push({ cifra: cifraEl?cifraEl.innerText:null, letra: letraEl?letraEl.innerText:null, observacao: obsEl?obsEl.innerText:'' });
+  });
+  return pObj;
+}
+function duplicarParte(){
+  if(!parteEditando) return;
+  const dados=extrairDadosDeUmaParte(parteEditando);
+  const temp=document.createElement('div'); temp.innerHTML=criarHtmlParte(dados);
+  const nova=temp.firstElementChild;
+  parteEditando.after(nova);
+  ativarDragLinhas(nova);
+  edicaoSuja=true;
+  fecharSheetParte();
+  mostrarAviso('Parte duplicada');
+}
+
 // BOTTOM SHEET DE CONFIGURAÇÃO DE PARTE
 function abrirSheetParte(idParte){
   const parte=document.getElementById(idParte); if(!parte) return; parteEditando=parte;
@@ -1067,6 +1250,16 @@ function abrirSheetParte(idParte){
   document.getElementById('sheet-fundo').classList.add('aberto'); document.getElementById('sheet-parte').classList.add('aberto');
 }
 function fecharSheetParte(){document.getElementById('sheet-fundo').classList.remove('aberto'); document.getElementById('sheet-parte').classList.remove('aberto'); parteEditando=null}
+function excluirParteSheet() {
+  if(!parteEditando) return;
+  if(confirm('Tem a certeza de que deseja excluir esta parte inteira?')) {
+    parteEditando.remove();
+    edicaoSuja = true;
+    fecharSheetParte();
+    atualizarIndiceCulto();
+  }
+}
+
 function salvarSheetParte(){
   if(!parteEditando) return;
   parteEditando.querySelector('.nome-parte').value = document.getElementById('sheet-nome').value;
@@ -1086,7 +1279,7 @@ async function saveCulto(){
     wrap.querySelectorAll('.parte').forEach(p=>{
       const pObj = { nome: p.querySelector('.nome-parte').value, codigo: p.dataset.codigo, repeticao: p.dataset.rep, intensidade: p.dataset.din, observacao: p.dataset.obs, linhas: [] };
       p.querySelectorAll('.linha-grupo').forEach(l=>{
-        pObj.linhas.push({ cifra: l.querySelector('.linha-cifra').innerText, letra: l.querySelector('.linha-letra').innerText, observacao: l.querySelector('.linha-obs').innerText });
+        pObj.linhas.push({ cifra: l.querySelector('.linha-cifra')?.innerText ?? null, letra: l.querySelector('.linha-letra')?.innerText ?? null, observacao: l.querySelector('.linha-obs')?.innerText || '' });
       });
       obj.partes.push(pObj);
     });
@@ -1103,17 +1296,16 @@ function salvarAlteracoesNoAcervo(btn, originalId) {
   const titulo = wrapper.querySelector('.musica-titulo').value.trim();
   if (!titulo) { mostrarAviso('Música sem título não pode ir pro Acervo'); return; }
   
-  // Extrai as partes do HTML
   const partes = [];
   wrapper.querySelectorAll('.parte').forEach(p=>{
     const pObj = { nome: p.querySelector('.nome-parte').value, codigo: p.dataset.codigo, repeticao: p.dataset.rep, intensidade: p.dataset.din, observacao: p.dataset.obs, linhas: [] };
     p.querySelectorAll('.linha-grupo').forEach(l=>{
-      pObj.linhas.push({ cifra: l.querySelector('.linha-cifra').innerText, letra: l.querySelector('.linha-letra').innerText, observacao: l.querySelector('.linha-obs').innerText });
+      pObj.linhas.push({ cifra: l.querySelector('.linha-cifra')?.innerText ?? null, letra: l.querySelector('.linha-letra')?.innerText ?? null, observacao: l.querySelector('.linha-obs')?.innerText || '' });
     });
     partes.push(pObj);
   });
   
-  const id = originalId && !originalId.startsWith('id-') ? originalId : gerarId(); // Mantém o ID original se veio do acervo
+  const id = originalId && !originalId.startsWith('id-') ? originalId : gerarId();
   const dados = { id, titulo, autores: '', tom: wrapper.dataset.tom || 'C', bpm: wrapper.dataset.bpm || '', beat: wrapper.dataset.beat || '4/4', partes };
   
   btn.textContent = '⏳ ...';
@@ -1154,10 +1346,6 @@ function ativarEdicaoEmBlocosAcervoComPartes(partes){
   const partesContainer=container.querySelector('.partes-container');
   partesContainer.innerHTML=partes.map(criarHtmlParte).join('');
   ativarDragLinhas(partesContainer);
-  
-  // Destrava os contenteditables forçando o foco (Bug do Chrome Mobile)
-  partesContainer.querySelectorAll('[contenteditable]').forEach(el => el.contentEditable = "true");
-  
   document.getElementById('campoTextoSimplesAcervo').style.display='none';
   container.style.display='block';
   modoBlocoAcervo=true;
@@ -1177,7 +1365,7 @@ function extrairPartesDoBlocoAcervo(){
   document.querySelectorAll('#blocosAcervoContainer .parte').forEach(p=>{
     const pObj={ nome:p.querySelector('.nome-parte').value, codigo:p.dataset.codigo, repeticao:p.dataset.rep, intensidade:p.dataset.din, observacao:p.dataset.obs, linhas:[] };
     p.querySelectorAll('.linha-grupo').forEach(l=>{
-      pObj.linhas.push({ cifra:l.querySelector('.linha-cifra').innerText, letra:l.querySelector('.linha-letra').innerText, observacao:l.querySelector('.linha-obs').innerText });
+      pObj.linhas.push({ cifra:l.querySelector('.linha-cifra')?.innerText ?? null, letra:l.querySelector('.linha-letra')?.innerText ?? null, observacao:l.querySelector('.linha-obs')?.innerText || '' });
     });
     partes.push(pObj);
   });
@@ -1295,7 +1483,7 @@ async function extrairPDFParaAcervo(input){
     const texto=await lerTextoDePDF(arquivo);
     document.getElementById('songChords').value=texto;
     
-    // Força o modo de texto cru (Desativa blocos caso estivessem ligados)
+    // Força o modo de texto cru
     desativarEdicaoEmBlocosAcervo();
     
     status.textContent='✅ PDF extraído em Modo Corrido (Limpo)';
