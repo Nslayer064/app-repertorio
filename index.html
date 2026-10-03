@@ -75,6 +75,7 @@ h1{font-size:28px;line-height:1.1;margin:2px 0 7px;letter-spacing:-1px;font-fami
 .compact-btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 11px;font-size:11px;font-weight:800;color:var(--text)}
 .compact-btn.ativo{background:var(--destaque);color:var(--cifra);border-color:var(--destaque)}
 .structure-wrap{padding:13px 18px 5px;background:var(--bg)}
+  body.modo-corrido .structure-wrap { position: sticky; top: 0; z-index: 15; padding: 10px 18px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
 .structure{display:flex;gap:6px;overflow:auto;padding-bottom:7px}
 .seg{flex:0 0 auto;border:1px solid var(--line);background:var(--surface);color:var(--brand);border-radius:9px;padding:7px 9px;font-size:10px;font-weight:850;cursor:pointer}
 .seg.active{background:var(--brand);color:#fff;border-color:var(--brand)}
@@ -523,14 +524,21 @@ const MAPA_ENARMONICO={'Db':'C#','Eb':'D#','Gb':'F#','Ab':'G#','Bb':'A#'};
 // e esquecer a outra era fonte garantida de bug de transposição).
 const REGEX_ACORDE=/[A-G][#b]?(?:m|maj7|m7|7M|m6|6|9|11|13|sus2|sus4|dim|aug|add9|m9|maj9|2|4)?(?:\/[A-G][#b]?)?/g;
 
-function transporNota(nota,semitons){
-  const base=nota.replace(/m|maj|min|sus|dim|aug|7|9|11|13|\(|\)|\/.*/g,'').replace(/[^A-G#b]/g,'');
-  let i=NOTAS.indexOf(base);
-  if(i===-1 && MAPA_ENARMONICO[base]) i=NOTAS.indexOf(MAPA_ENARMONICO[base]);
-  if(i===-1) return nota;
-  const novo=NOTAS[(i+semitons+120)%12];
-  return novo+nota.slice(base.length);
+function transporBase(notaStr, semit) {
+  const base = notaStr.replace(/m|maj|min|sus|dim|aug|7|9|11|13|\(|\)/g,'').replace(/[^A-G#b]/g,'');
+  let i = NOTAS.indexOf(base);
+  if (i === -1 && MAPA_ENARMONICO[base]) i = NOTAS.indexOf(MAPA_ENARMONICO[base]);
+  if (i === -1) return notaStr;
+  const novo = NOTAS[(i + semit + 120) % 12];
+  return novo + notaStr.slice(base.length);
 }
+
+function transporNota(nota, semitons){
+  if (!nota.includes('/')) return transporBase(nota, semitons);
+  const partes = nota.split('/');
+  return transporBase(partes[0], semitons) + '/' + transporBase(partes[1], semitons);
+}
+
 
 let parteEditando = null; // Para o Bottom Sheet
 
@@ -1078,9 +1086,15 @@ function adicionarMusicaNoCultoEditor(m){
   wrapper.dataset.tom = m.tom||'C'; wrapper.dataset.bpm = m.bpm||''; wrapper.dataset.beat = m.beat||'4/4';
   
   const partesHtml=(m.partes||[{nome:'PARTE',linhas:[{cifra:'',letra:'',observacao:''}]}]).map(criarHtmlParte).join('');
-  wrapper.innerHTML=`
+    wrapper.innerHTML=`
     <div style="display:flex;justify-content:space-between;align-items:flex-end;margin:24px 0 8px;border-bottom:2px solid var(--line);padding-bottom:6px; flex-wrap:wrap; gap:8px">
-      <input type="text" class="musica-titulo" value="${escaparHtml(m.titulo||'Nova Música')}" style="font-family:var(--fd);font-size:22px;font-weight:900;border:none;background:transparent;outline:none;flex:1;min-width:200px;color:var(--brand)">
+      <div style="display:flex;align-items:center;flex:1;min-width:200px">
+        <input type="text" class="musica-titulo" value="${escaparHtml(m.titulo||'Nova Música')}" style="font-family:var(--fd);font-size:22px;font-weight:900;border:none;background:transparent;outline:none;flex:1;color:var(--brand)">
+        <div style="display:flex;flex-direction:column;gap:2px;margin-right:12px">
+          <button type="button" onclick="moverMusicaCulto(this, 'cima')" style="border:none;background:var(--surface-2);border-radius:4px;font-size:10px;padding:2px 8px;cursor:pointer;color:var(--muted)">▲</button>
+          <button type="button" onclick="moverMusicaCulto(this, 'baixo')" style="border:none;background:var(--surface-2);border-radius:4px;font-size:10px;padding:2px 8px;cursor:pointer;color:var(--muted)">▼</button>
+        </div>
+      </div>
       <div style="display:flex;gap:6px">
          <button class="btn-del-sec" onclick="salvarAlteracoesNoAcervo(this, '${m.id}')" style="background:var(--green-soft);color:#168348;border:1px solid #168348;border-radius:8px;padding:4px 8px;font-weight:700">💾 Atualizar Acervo</button>
          <button class="btn-del-sec" onclick="this.closest('.musica-wrapper').remove(); edicaoSuja=true; atualizarIndiceCulto();" style="background:var(--surface-2);color:var(--danger);border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-weight:700">✕</button>
@@ -1098,6 +1112,18 @@ function adicionarMusicaNoCultoEditor(m){
 // mas nunca era preenchido — ficava sempre uma barra vazia, sem função. Agora
 // lista as músicas do repertório e pula direto pra qualquer uma ao tocar,
 // prático pra repertórios com muitas músicas durante a edição.
+function moverMusicaCulto(btn, direcao) {
+  const wrapper = btn.closest('.musica-wrapper');
+  if (!wrapper) return;
+  if (direcao === 'cima' && wrapper.previousElementSibling?.classList.contains('musica-wrapper')) {
+    wrapper.parentElement.insertBefore(wrapper, wrapper.previousElementSibling);
+  } else if (direcao === 'baixo' && wrapper.nextElementSibling?.classList.contains('musica-wrapper')) {
+    wrapper.parentElement.insertBefore(wrapper.nextElementSibling, wrapper);
+  }
+  atualizarIndiceCulto();
+  edicaoSuja = true;
+}
+
 function atualizarIndiceCulto(){
   const nav=document.getElementById('cultoSectionsNav'); if(!nav) return;
   const wrappers=[...document.querySelectorAll('#cultoSongsList .musica-wrapper')];
