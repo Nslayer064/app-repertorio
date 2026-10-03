@@ -584,7 +584,14 @@ document.addEventListener('visibilitychange', ()=>{
     if(ficou>45*60*1000 || (agora-ultimo)>2*60*60*1000){ // 45 minutos inativo -> Tela de Login
       logout(); return;
     }
-    if(ficou>15*60*1000 && ['editor-culto','execution'].includes(currentScreen)){ showScreen('home'); mostrarAviso('Atualizando...'); carregarCultosAtuais(true); }
+    if(ficou>15*60*1000){ 
+      // Cortina de Retorno (Hard Reload): muito tempo fora, protege a tela e recarrega os dados
+      if(['editor-culto','editor-musica'].includes(currentScreen)) showScreen('home'); 
+      iniciarCarregamentoInicial(); 
+    } else if(ficou>2000 && igrejaLogada) {
+      // Ping de Despertar (Warm-up): saiu rápido e voltou, acorda o servidor silenciosamente
+      fetch(`${APPS_SCRIPT_URL}?acao=ping&_=${Date.now()}`).catch(()=>{});
+    }
     salvarUltimoAtivo();
   }
 });
@@ -785,9 +792,16 @@ function openCurrentCulto(){ if(currentCultoId) carregarRepertorioDaNuvem(curren
 async function iniciarCarregamentoInicial(){
   const tela=document.getElementById('telaCarregamento');
   tela.classList.add('ativa');
-  document.getElementById('statusCarregamento').textContent='A carregar dados...';
-  const limiteSeguranca=new Promise(resolve=>setTimeout(resolve,5000));
-  await Promise.race([ carregarCultosAtuais(true), limiteSeguranca ]);
+  const statusTxt = document.getElementById('statusCarregamento');
+  statusTxt.textContent='A carregar dados...';
+  
+  // UX: Muda o texto se demorar mais de 4s (Cold Start do Google)
+  const timeoutUX = setTimeout(() => { statusTxt.textContent='Conectando ao servidor (pode levar alguns segundos)...'; }, 4000);
+  
+  // Espera o banco responder E no mínimo 1.5s para a animação da logo não piscar (Minimum Splash Time)
+  await Promise.all([ carregarCultosAtuais(true), new Promise(r => setTimeout(r, 1500)) ]);
+  
+  clearTimeout(timeoutUX);
   tela.classList.remove('ativa');
   
   // BACKGROUND FETCH: Descarrega a biblioteca em silêncio após libertar o ecrã
@@ -1179,7 +1193,8 @@ function soltarParte(ev, el) {
 // DRAG E DROP E AÇÕES DE LINHA
 function ativarDragLinhas(scope){
   let dragEl=null;
-  scope.querySelectorAll('.linha-grupo').forEach(el=>{
+  scope.querySelectorAll('.linha-grupo:not(.drag-ativo)').forEach(el=>{
+    el.classList.add('drag-ativo'); // Trava: previne vazamento de eventos na memória
     el.addEventListener('dragstart',()=>{dragEl=el; setTimeout(()=>el.style.opacity='.4',0)});
     el.addEventListener('dragend',()=>{el.style.opacity=''; dragEl=null;});
     el.addEventListener('dragover',ev=>{ev.preventDefault(); const after=getDragAfterElement(el.parentElement,ev.clientY); if(after==null) el.parentElement.insertBefore(dragEl, el.parentElement.querySelector('.botoes-rodape-parte')); else el.parentElement.insertBefore(dragEl, after)});
